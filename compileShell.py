@@ -51,7 +51,7 @@ def testBinary(shell, file, flagsRequired, valgSupport, verbose=False, timeout=N
   (out, err) = ('', '')
   retCode = 0
 
-  if (timeout != None):
+  if (timeout is not None):
     signal.signal(signal.SIGALRM, alarm_handler)
     signal.alarm(timeout)  # 5 minutes
   try:
