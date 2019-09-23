@@ -92,7 +92,7 @@ def parseOpts():
   if len(args) < 1:
     parser.error('Not enough arguments')
 
-  return (options, args)
+  return options, args
 
 
 def main():
@@ -216,10 +216,10 @@ class BugMonitor:
     verifiedFlags = []
     comments = []
 
-    if (self.bug.status == "RESOLVED" and self.bug.resolution == "FIXED"):
+    if self.bug.status == "RESOLVED" and self.bug.resolution == "FIXED":
       result = self.reproduceBug()
 
-      if (result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED):
+      if result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
         if updateBug:
           print "Marking bug " + str(self.bug.id) + " as verified fixed..."
           # Mark VERIFIED FIXED now
@@ -233,7 +233,7 @@ class BugMonitor:
 
     for branchNum in range(self.centralVersion - 3, self.centralVersion):
       statusFlagName = 'cf_status_firefox' + str(branchNum)
-      if (getattr(self.bug, statusFlagName) == 'fixed'):
+      if getattr(self.bug, statusFlagName) == 'fixed':
         branchRepo = self.branches[self.centralVersion - branchNum]
         branchRepoRev = self.hgFindFixParent(os.path.join(self.repoBase, branchRepo))
 
@@ -243,7 +243,7 @@ class BugMonitor:
 
         result = self.reproduceBug(branchRepo, branchRepoRev)
 
-        if (result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED):
+        if result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
           if updateBug:
             print "Marking bug " + str(self.bug.id) + " as verified fixed on Fx" + str(branchNum) + " ..."
             verifiedFlags.append(statusFlagName)
@@ -282,7 +282,7 @@ class BugMonitor:
     return
 
   def confirmOpenBug(self, updateBug, updateBugPositive):
-    if (self.bug.status != "RESOLVED" and self.bug.status != "VERIFIED"):
+    if self.bug.status != "RESOLVED" and self.bug.status != "VERIFIED":
       bugUpdateRequested = False
       bugConfirmRequested = False
       bugCloseRequested = False
@@ -291,29 +291,29 @@ class BugMonitor:
       closeBug = False
 
       wbOpts = []
-      if (self.bug.whiteboard):
+      if self.bug.whiteboard:
         ret = re.compile('\[jsbugmon:([^\]]+)\]').search(self.bug.whiteboard)
-        if (ret is not None and ret.groups > 1):
+        if ret is not None and ret.groups > 1:
           wbOpts = ret.group(1).split(",")
 
       # Explicitly marked to ignore this bug
-      if ('ignore' in wbOpts):
+      if 'ignore' in wbOpts:
         return
 
-      if ('update' in wbOpts):
+      if 'update' in wbOpts:
         bugUpdateRequested = True
 
-      if ('reconfirm' in wbOpts):
+      if 'reconfirm' in wbOpts:
         bugConfirmRequested = True
 
-      if ('close' in wbOpts):
+      if 'close' in wbOpts:
         bugCloseRequested = True
 
       result = self.reproduceBug()
 
       comments = []
 
-      if (result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP):
+      if result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
         if updateBugPositive or bugConfirmRequested:
           print "Marking bug " + str(self.bug.id) + " as confirmed on tip..."
           # Add a comment
@@ -322,7 +322,7 @@ class BugMonitor:
           bugUpdated = True
         else:
           print "Would mark bug " + str(self.bug.id) + " as confirmed on tip..."
-      elif (result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED):
+      elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
         if updateBug or bugUpdateRequested:
           print "Marking bug " + str(self.bug.id) + " as non-reproducing on tip..."
           # Add a comment
@@ -356,7 +356,7 @@ class BugMonitor:
             print "Failed to submit bug change, sleeping one second and retrying..."
             time.sleep(1)
 
-      if (len(comments) > 0):
+      if len(comments) > 0:
         comment = "\n".join(comments)
         print "Posting comment: "
         print comment
@@ -380,34 +380,34 @@ class BugMonitor:
     verifyBug = False
 
     wbOpts = []
-    if (self.bug.whiteboard is not None):
+    if self.bug.whiteboard is not None:
       ret = re.compile('\[jsbugmon:([^\]]+)\]').search(self.bug.whiteboard)
-      if (ret is not None and ret.groups > 1):
+      if ret is not None and ret.groups > 1:
         wbOpts = ret.group(1).split(",")
 
       # Explicitly marked to ignore this bug
-      if ('ignore' in wbOpts):
+      if 'ignore' in wbOpts:
         return
 
-      if ('update' in wbOpts):
+      if 'update' in wbOpts:
         bugUpdateRequested = True
 
-      if ('reconfirm' in wbOpts):
+      if 'reconfirm' in wbOpts:
         bugConfirmRequested = True
 
-      if ('close' in wbOpts):
+      if 'close' in wbOpts:
         bugCloseRequested = True
 
-      if ('verify' in wbOpts):
+      if 'verify' in wbOpts:
         bugVerifyRequested = True
 
-      if ('bisect' in wbOpts):
+      if 'bisect' in wbOpts:
         bugBisectRequested = True
 
-      if ('bisectfix' in wbOpts):
+      if 'bisectfix' in wbOpts:
         bugBisectFixRequested = True
 
-      if ('bisect-force-compile' in wbOpts):
+      if 'bisect-force-compile' in wbOpts:
         bugBisectForceCompile = True
 
       print wbOpts
@@ -421,22 +421,22 @@ class BugMonitor:
       result = None
 
       for opt in wbOpts:
-        if (opt.find("=") > 0):
+        if opt.find("=") > 0:
           (cmd, param) = opt.split('=')
-          if (cmd is not None and param is not None):
-            if (cmd == "verify-branch"):
+          if cmd is not None and param is not None:
+            if cmd == "verify-branch":
               branches = param.split(';');
               for branch in branches:
                 if not branch in self.branches:
                   continue
                 print "Branch " + branch
                 branchResult = self.reproduceBug(branch)
-                if (branchResult.status == BugMonitorResult.statusCodes.REPRODUCED_TIP):
+                if branchResult.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
                   print "Marking bug " + str(self.bug.id) + " as reproducing on branch " + branch + " ..."
                   # Add a comment
                   comments.append(
                     "JSBugMon: This bug has been automatically confirmed to be still valid on branch " + branch + "  (reproduced on revision " + branchResult.tipRev + ").")
-                elif (branchResult.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED):
+                elif branchResult.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
                   print "Marking bug " + str(self.bug.id) + " as non-reproducing on branch " + branch + " ..."
                   comments.append(
                     "JSBugMon: The testcase found in this bug does not reproduce on branch " + branch + " (tried revision " + branchResult.tipRev + ").")
@@ -449,12 +449,12 @@ class BugMonitor:
         if self.bug.status == "RESOLVED":
           if result is None:
             result = self.reproduceBug()
-          if (result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP):
+          if result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
             print "Marking bug " + str(self.bug.id) + " as cannot verify fixed..."
             # Add a comment
             comments.append(
               "JSBugMon: Cannot confirm fix, issue is still valid. (tried revision " + result.tipRev + ").")
-          elif (result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED):
+          elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
             print "Marking bug " + str(self.bug.id) + " as verified fixed..."
             comments.append(
               "JSBugMon: This bug has been automatically verified fixed. (tried revision " + result.tipRev + ").")
@@ -488,7 +488,7 @@ class BugMonitor:
                 comments.append(
                   "JSBugMon: This bug has been automatically confirmed to be still valid (reproduced on revision " + result.tipRev + ").")
 
-            elif (result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED):
+            elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
               print "Marking bug " + str(self.bug.id) + " as non-reproducing on tip..."
               # Add a comment
               comments.append(
@@ -496,7 +496,7 @@ class BugMonitor:
               if bugCloseRequested:
                 closeBug = True
 
-            elif (result.status == BugMonitorResult.statusCodes.FAILED):
+            elif result.status == BugMonitorResult.statusCodes.FAILED:
               bugFailureMsg = "JSBugMon: Cannot process bug: Unable to automatically reproduce, please track manually."
 
       # If we already failed with the update command, don't try to bisect for now
@@ -534,7 +534,7 @@ class BugMonitor:
           except BugException as b:
             bisectComments.append("JSBugMon: Fix Bisection requested, failed due to error: " + str(b))
             bisectComments.append("")
-        if (result is not None and result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED):
+        if result is not None and result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
           print "Bisecting fix for bug " + str(self.bug.id) + " ..."
           bisectComment = self.bisectBug(result, bisectForFix=True, forceCompile=bugBisectForceCompile)
           if bisectComment is not None:
@@ -565,7 +565,7 @@ class BugMonitor:
         wbOpts.remove('bisectfix')
         comments.extend(bisectFixComments)
 
-      if ((bugBisectRequested or (bugBisectFixRequested and len(bisectFixComments) > 0)) and bugBisectForceCompile):
+      if (bugBisectRequested or (bugBisectFixRequested and len(bisectFixComments) > 0)) and bugBisectForceCompile:
         whiteBoardModified = True
         wbOpts.remove('bisect-force-compile')
 
@@ -610,7 +610,7 @@ class BugMonitor:
           print "Failed to submit bug change, sleeping one second and retrying..."
           time.sleep(1)
 
-      if (len(comments) > 0):
+      if len(comments) > 0:
         comment = "\n".join(comments)
         print "Posting comment: "
         print comment
@@ -698,39 +698,39 @@ class BugMonitor:
     testCommentIdx = 0
     rev = None
 
-    if (tipBranch is not None and tipBranchRev is not None):
+    if tipBranch is not None and tipBranchRev is not None:
       rev = tipBranchRev
 
-    if (self.bug.whiteboard is not None):
+    if self.bug.whiteboard is not None:
       ret = re.compile('\[jsbugmon:([^\]]+)\]').search(self.bug.whiteboard)
-      if (ret is not None and ret.groups > 1):
+      if ret is not None and ret.groups > 1:
         wbOpts = ret.group(1).split(",")
         for opt in wbOpts:
-          if (opt.find("=") > 0):
+          if opt.find("=") > 0:
             (cmd, param) = opt.split('=')
-            if (cmd is not None and param is not None):
-              if (cmd == "origRev" and rev is None):
+            if cmd is not None and param is not None:
+              if cmd == "origRev" and rev is None:
                 rev = param
-              elif (cmd == "testComment" and param.isdigit()):
+              elif cmd == "testComment" and param.isdigit():
                 testCommentIdx = int(param)
 
     # Look for the first comment
     comments = self.bug.get_comments()
     comment = comments[testCommentIdx] if len(comments) > testCommentIdx else None
 
-    if (comment is None):
+    if comment is None:
       raise BugException("Error: Specified bug does not have any comments")
 
     text = comment.text
 
     # Isolate revision to test for
-    if (rev is None):
+    if rev is None:
       rev = self.extractRevision(text)
     else:
       # Sanity check of the revision
       rev = self.extractRevision(rev)
 
-    if (rev is None):
+    if rev is None:
       raise BugException("Error: Failed to isolate original revision for test")
 
     buildFlags = []
@@ -740,7 +740,7 @@ class BugMonitor:
                   "--disable-optimize"]
 
     for flag in checkFlags:
-      if (re.search(flag + "[^-a-zA-Z0-9]", text) is not None):
+      if re.search(flag + "[^-a-zA-Z0-9]", text) is not None:
         buildFlags.append(flag)
 
     # Flags to use when searching for the test ("scanning") using SyntaxError method
@@ -749,7 +749,7 @@ class BugMonitor:
     opts = []
 
     for opt in self.allowedOpts:
-      if (text.find(opt) != -1):
+      if text.find(opt) != -1:
         opts.append(opt)
 
     viableOptsList.append(opts)
@@ -773,9 +773,9 @@ class BugMonitor:
     if '--fuzzing-safe' not in opts:
       opts.append('--fuzzing-safe')
 
-    if (self.bug.version == "Trunk"):
+    if self.bug.version == "Trunk":
       reponame = "mozilla-central"
-    elif (self.bug.version == "Other Branch"):
+    elif self.bug.version == "Other Branch":
       reponame = "ionmonkey"
     else:
       raise BugException("Error: Unsupported branch \"" + self.bug.version + "\" required by bug")
@@ -784,36 +784,36 @@ class BugMonitor:
     repoDir = os.path.join(self.repoBase, reponame)
 
     # If told to use a different tipBranch, use that for tip testing
-    if (tipBranch is None):
+    if tipBranch is None:
       tipBranch = reponame
 
     tipRepoDir = os.path.join(self.repoBase, tipBranch)
 
     # If we are given a specific revision even for testing, then use
     # the tipBranch for all testing, including initial reproduction
-    if (tipBranchRev is not None):
+    if tipBranchRev is not None:
       repoDir = tipRepoDir
 
     print "Using repository at %s with revision %s for initial reproduction" % (repoDir, rev)
-    print "Using repository at %s with tip revision for testing" % (tipRepoDir)
+    print "Using repository at %s with tip revision for testing" % tipRepoDir
 
     arch = None
     archList = None
-    if (self.bug.platform == "x86_64"):
+    if self.bug.platform == "x86_64":
       arch = "64"
-    elif (self.bug.platform == "x86"):
+    elif self.bug.platform == "x86":
       arch = "32"
-    elif (self.bug.platform == "All"):
+    elif self.bug.platform == "All":
       arch = "64"
       archList = ["64", "32"]  # TODO: Detect native platform here
 
       # When auto-detecting, avoid using ARM simulator for now
       if "--enable-simulator=arm" in buildFlags:
         buildFlags.remove("--enable-simulator=arm")
-    elif (self.bug.platform == "ARM"):
+    elif self.bug.platform == "ARM":
       arch = "32"
       buildFlags.append("--enable-simulator=arm")
-    elif (self.bug.platform == "ARM64"):
+    elif self.bug.platform == "ARM64":
       arch = "64"
       buildFlags.append("--enable-simulator=arm64")
     else:
@@ -833,7 +833,7 @@ class BugMonitor:
     else:
       testFile = "bug" + str(self.bug.id) + ".js"
 
-    if (os.path.exists(testFile)):
+    if os.path.exists(testFile):
       print "Using existing (cached) testfile " + testFile
     else:
 
@@ -849,7 +849,7 @@ class BugMonitor:
         print "Testing syntax with shell %s" % testShell
         (err, ret) = testBinary(testShell, testFile, scanOpts, 0, timeout=30)
 
-        if (err.find("SyntaxError") < 0):
+        if err.find("SyntaxError") < 0:
           # We have found the test (or maybe only the start of the test)
           # Try adding more code until we hit an error or are out of
           # blocks.
@@ -863,7 +863,7 @@ class BugMonitor:
               outFile.write(curBlock)
               outFile.close()
               (err, ret) = testBinary(testShell, testFile, scanOpts, 0, timeout=30)
-              if (err.find("SyntaxError") >= 0):
+              if err.find("SyntaxError") >= 0:
                 # Too much, write oldBlock and break
                 outFile = open(testFile, "w")
                 outFile.write(oldBlock)
@@ -883,7 +883,7 @@ class BugMonitor:
           if attachment.is_obsolete:
             continue
           # Seriously, we don't need anything larger than 512kb here^^
-          if (attachment.size <= 512 * 1024):
+          if attachment.size <= 512 * 1024:
             try:
               rawData = base64.b64decode(attachment.data)
               # Write our data to file
@@ -891,7 +891,7 @@ class BugMonitor:
               outFile.write(rawData)
               outFile.close()
               (err, ret) = testBinary(testShell, testFile, scanOpts, 0, timeout=30)
-              if (err.find("SyntaxError") < 0):
+              if err.find("SyntaxError") < 0:
                 # Found something that looks like JS :)
                 found = True
                 break
@@ -908,7 +908,7 @@ class BugMonitor:
     (origShell, origRev) = (None, None)
 
     # If we have an exact architecture, we will only test that
-    if (archList is None):
+    if archList is None:
       archList = [arch]
 
     for compileType in ['dbg', 'opt']:
@@ -922,21 +922,21 @@ class BugMonitor:
 
         for opts in viableOptsList:
           (oouterr, oret) = testBinary(origShell, testFile, opts, 0, verbose=self.options.verbose, timeout=30)
-          if (oret < 0):
+          if oret < 0:
             break
 
         # If we reproduced with one arch, then we don't need to try the others
-        if (oret < 0):
+        if oret < 0:
           break
 
         print ""
 
       # If we reproduced with dbg, then we don't need to try opt
-      if (oret < 0):
+      if oret < 0:
         break
 
     # Check if we reproduced at all (dbg or opt)
-    if (oret < 0):
+    if oret < 0:
       print ""
       print "Successfully reproduced bug (exit code " + str(oret) + ") on original revision " + rev + ":"
       errl = oouterr.split("\n")
@@ -964,13 +964,13 @@ class BugMonitor:
       tipOpts = None
       for opts in viableOptsList:
         (touterr, tret) = testBinary(tipShell, testFile, opts, 0, verbose=self.options.verbose, timeout=30)
-        if (tret < 0):
+        if tret < 0:
           tipOpts = opts
           break
 
-      if (tret < 0):
-        if (tret == oret):
-          if (opts == tipOpts):
+      if tret < 0:
+        if tret == oret:
+          if opts == tipOpts:
             print "Result: Bug still reproduces"
             return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
                                     buildFlags, BugMonitorResult.statusCodes.REPRODUCED_TIP)
@@ -996,17 +996,17 @@ class BugMonitor:
 
   def extractOptions(self, text):
     ret = re.compile('((?: \-[a-z])+)', re.DOTALL).search(text)
-    if (ret is not None and ret.groups > 1):
+    if ret is not None and ret.groups > 1:
       return ret.group(1).lstrip().split(" ")
 
     return None
 
   def extractRevision(self, text):
-    if (text is None):
+    if text is None:
       return None
     tokens = text.split(' ')
     for token in tokens:
-      if (re.match('^[a-f0-9]{12}[^a-f0-9]?', token)):
+      if re.match('^[a-f0-9]{12}[^a-f0-9]?', token):
         return token[0:12]
     return None
 
@@ -1022,7 +1022,7 @@ class BugMonitor:
 
       rev = line[0][0:12]
 
-      if (line[1].find(str(self.bug.id)) != -1):
+      if line[1].find(str(self.bug.id)) != -1:
         return prevRev
 
       prevRev = rev
@@ -1031,7 +1031,7 @@ class BugMonitor:
   def hgUpdate(self, repoDir, rev=None):
     try:
       print "Running hg update..."
-      if (rev is not None):
+      if rev is not None:
         captureStdout(['hg', 'update', '-C', '-r', rev], ignoreStderr=True, currWorkingDir=repoDir)
       else:
         captureStdout(['hg', 'update', '-C'], ignoreStderr=True, currWorkingDir=repoDir)
@@ -1080,19 +1080,19 @@ class BugMonitor:
     if archNum == "32":
       buildFlags.append('--32')
 
-    buildOpts = '-R %s' % (repoDir)
+    buildOpts = '-R %s' % repoDir
     if buildFlags is not None and len(buildFlags) > 0:
       buildOpts += ' %s' % " ".join(buildFlags)
 
-    if (shell is None):
-      if (rev is None):
+    if shell is None:
+      if rev is None:
         rev = self.hgUpdate(repoDir, rev)
         print "Compiling a new shell for tip (revision " + rev + ")"
       else:
         print "Compiling a new shell for revision " + rev
       shell = captureStdout(['/srv/repos/funfuzz/js/compileShell.py', '-b', buildOpts, '-r', rev])[0].split("\n")[-1]
 
-    return (shell, rev)
+    return shell, rev
 
 
 if __name__ == '__main__':

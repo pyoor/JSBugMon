@@ -11,7 +11,7 @@ def main():
 
   path = sys.argv[1]
 
-  while (getFreeSpacePercentage(path) < 0.05):
+  while getFreeSpacePercentage(path) < 0.05:
     shellDirs = os.listdir(path)
 
     (oldestShellDir, oldestShellDirAtime) = (None, None)

@@ -30,7 +30,7 @@ def macType():
            and platform.mac_ver()[0].split('.') >= ['10', '6']
     amiLion = isMac and platform.mac_ver()[0].split('.')[1] == '7' \
               and platform.mac_ver()[0].split('.') >= ['10', '7']
-  return (isMac, isSL, amiLion)
+  return isMac, isSL, amiLion
 
 
 def isVM():
@@ -47,7 +47,7 @@ def isVM():
     assert not os.path.exists(normExpUserPath(os.path.join('~', 'fuzzing')))
     assert not os.path.exists(normExpUserPath(os.path.join('~', 'trees')))
     vm = True
-  return (platform.system(), vm)
+  return platform.system(), vm
 
 
 #####################
