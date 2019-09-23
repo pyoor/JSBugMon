@@ -7,19 +7,12 @@
 import os
 import platform
 import subprocess
-import shutil
 import sys
-import re
-import tempfile
-import copy
-
-from traceback import format_exc
 
 path0 = os.path.dirname(__file__)
 path1 = os.path.abspath(os.path.join(path0, os.pardir, 'util'))
 sys.path.append(path1)
-from subprocesses import captureStdout, macType, normExpUserPath, vdump
-from countCpus import cpuCount
+from subprocesses import vdump
 
 import signal
 

@@ -1,7 +1,6 @@
 import os
-import sys
 import shutil
-from __builtin__ import file
+import sys
 
 
 def main():

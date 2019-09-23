@@ -16,22 +16,19 @@
 # ***** END LICENSE BLOCK *****
 
 import base64
-import itertools
 import os
-import argparse
-import re
 import platform
+import re
 import subprocess
-import traceback
-import time
 import sys
-
+import time
+import traceback
 from optparse import OptionParser
+
+from bugsy import Bugsy
 
 from compileShell import testBinary
 from subprocesses import captureStdout
-
-from bugsy import Bugsy
 
 
 def enum(*sequential, **named):

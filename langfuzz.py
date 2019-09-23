@@ -15,9 +15,9 @@
 #
 # ***** END LICENSE BLOCK *****
 
-import sys
 import os
 import subprocess
+import sys
 
 from bugzilla.agents import BMOAgent
 from bugzilla.utils import get_credentials
