@@ -8,9 +8,9 @@ import os
 
 
 def cpuCount():
-  '''
+  """
   A version of cpu_count() that seems compatible with Python 2.5
-  '''
+  """
   # POSIX platforms
   if hasattr(os, 'sysconf'):
     if os.sysconf_names.has_key('SC_NPROCESSORS_ONLN'):
