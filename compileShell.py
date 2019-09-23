@@ -26,8 +26,8 @@ def alarm_handler(signum, frame):
 
 
 # Run the testcase on the compiled js binary.
-def testBinary(shell, file, flagsRequired, valgSupport, verbose=False, timeout=None):
-  testBinaryCmd = [shell] + flagsRequired + [file]
+def testBinary(shell, filename, flagsRequired, valgSupport, verbose=False, timeout=None):
+  testBinaryCmd = [shell] + flagsRequired + [filename]
   if valgSupport:
     valgPrefixCmd = []
     valgPrefixCmd.append('valgrind')

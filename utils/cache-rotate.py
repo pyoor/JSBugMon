@@ -20,9 +20,9 @@ def main():
       if shellDir.startswith("tboxjs-"):
         binPath = os.path.join(path, shellDir, "build", "dist", "js")
       elif shellDir.startswith("js-"):
-        for file in os.listdir(os.path.join(path, shellDir)):
-          if file.startswith("js-"):
-            binPath = os.path.join(path, shellDir, file)
+        for filename in os.listdir(os.path.join(path, shellDir)):
+          if filename.startswith("js-"):
+            binPath = os.path.join(path, shellDir, filename)
             break
       else:
         continue
