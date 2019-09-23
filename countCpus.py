@@ -23,7 +23,7 @@ def cpuCount():
       return int(os.popen2('sysctl -n hw.ncpu')[1].read())
   # Windows
   if os.environ.has_key('NUMBER_OF_PROCESSORS'):
-    cpuNum = int(os.environ['NUMBER_OF_PROCESSORS']);
+    cpuNum = int(os.environ['NUMBER_OF_PROCESSORS'])
     if cpuNum > 0:
       return cpuNum
   # Return 1 by default

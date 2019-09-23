@@ -425,7 +425,7 @@ class BugMonitor:
           (cmd, param) = opt.split('=')
           if cmd is not None and param is not None:
             if cmd == "verify-branch":
-              branches = param.split(';');
+              branches = param.split(';')
               for branch in branches:
                 if not branch in self.branches:
                   continue
@@ -544,7 +544,7 @@ class BugMonitor:
               bisectFixComments.extend(bisectComment)
             else:
               bisectFixComments.append("JSBugMon: Fix Bisection requested, failed due to error (try manually).")
-              bisectFixComments.append("");
+              bisectFixComments.append("")
           else:
             # Threat this as a temporary failure, don't remove the whiteboard tag
             bugBisectFixRequested = False
@@ -632,7 +632,7 @@ class BugMonitor:
     print "DEBUG: Attempting binary bisection: %s" % str(cmd)
     outLines = None
     try:
-      outLines = subprocess.check_output(cmd).split("\n");
+      outLines = subprocess.check_output(cmd).split("\n")
     except subprocess.CalledProcessError:
       # Threat this as a temporary failure, fallback to compiled bisection
       return self.bisectBugCompile(reproductionResult, bisectForFix)
@@ -668,7 +668,7 @@ class BugMonitor:
     print "DEBUG: %s" % str(cmd)
     outLines = None
     try:
-      outLines = subprocess.check_output(cmd).split("\n");
+      outLines = subprocess.check_output(cmd).split("\n")
     except subprocess.CalledProcessError:
       # Threat this as a temporary failure
       return None
