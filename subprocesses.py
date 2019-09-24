@@ -55,7 +55,7 @@ def isVM():
 #####################
 
 def captureStdout(cmd, ignoreStderr=False, combineStderr=False, ignoreExitCode=False,
-                  currWorkingDir=os.getcwdu(), env=os.environ, verbosity=False):
+                  currWorkingDir=os.getcwd(), env=os.environ, verbosity=False):
   '''
   Captures standard output, returns the output as a string, along with the return value.
   '''
@@ -73,10 +73,10 @@ def captureStdout(cmd, ignoreStderr=False, combineStderr=False, ignoreExitCode=F
     # makeShell function in autoBisect.
     # Pymake in builds earlier than revision 232553f741a0 did not support the '-s' option.
     if 'no such option: -s' not in stdout:
-      print 'Nonzero exit code from ' + repr(cmd)
-      print stdout
+      print('Nonzero exit code from ' + repr(cmd))
+      print(stdout)
     if stderr is not None:
-      print stderr
+      print(stderr)
     # Pymake in builds earlier than revision 232553f741a0 did not support the '-s' option.
     if 'hg pull: option --rebase not recognized' not in stdout and \
         'no such option: -s' not in stdout:
@@ -89,19 +89,19 @@ def captureStdout(cmd, ignoreStderr=False, combineStderr=False, ignoreExitCode=F
              # Ignore stderr warning when running a Linux VM on a Mac host:
              # Not trusting file /mnt/hgfs/trees/mozilla-central/.hg/hgrc from untrusted user 501...
              'hgrc from untrusted user 501' in stderr)):
-      print 'Unexpected output on stderr from ' + repr(cmd)
-      print stdout, stderr
+      print('Unexpected output on stderr from ' + repr(cmd))
+      print(stdout, stderr)
       raise Exception('Unexpected output on stderr')
   if stderr and ignoreStderr and len(stderr) > 0 and p.returncode != 0:
     # During configure, there will always be stderr. Sometimes this stderr causes configure to
     # stop the entire script, especially on Windows.
-    print 'Return code not zero, and unexpected output on stderr from ' + repr(cmd)
-    print stdout, stderr
+    print('Return code not zero, and unexpected output on stderr from ' + repr(cmd))
+    print(stdout, stderr)
     raise Exception('Return code not zero, and unexpected output on stderr')
   if verbose or verbosity:
-    print stdout
+    print(stdout)
     if stderr is not None:
-      print stderr
+      print(stderr)
   return stdout.rstrip(), p.returncode
 
 
@@ -119,17 +119,17 @@ def normExpUserPath(p):
   return os.path.normpath(os.path.expanduser(p))
 
 
-def timeSubprocess(command, cwd=os.getcwdu(), vb=False):
+def timeSubprocess(command, cwd=os.getcwd(), vb=False):
   '''
   Calculates how long a captureStdout command takes and prints it. Returns the stdout and return
   value that captureStdout passes on.
   '''
-  print 'Running `%s` now..' % ' '.join(command)
+  print('Running `%s` now..' % ' '.join(command))
   startTime = time.time()
   stdOutput, retVal = captureStdout(
     command, ignoreStderr=True, combineStderr=True, currWorkingDir=cwd, verbosity=vb)
   endTime = time.time()
-  print '`' + ' '.join(command) + '` took %.3f seconds.\n' % (endTime - startTime)
+  print('`' + ' '.join(command) + '` took %.3f seconds.\n' % (endTime - startTime))
   return stdOutput, retVal
 
 
@@ -138,7 +138,7 @@ def vdump(inp):
   This function appends the word 'DEBUG' to any verbose output.
   '''
   if verbose:
-    print 'DEBUG -', inp
+    print('DEBUG -', inp)
 
 
 if __name__ == '__main__':

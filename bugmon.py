@@ -32,7 +32,7 @@ from subprocesses import captureStdout
 
 
 def enum(*sequential, **named):
-  enums = dict(zip(sequential, range(len(sequential))), **named)
+  enums = dict(list(zip(sequential, list(range(len(sequential))))), **named)
   return type('Enum', (), enums)
 
 
@@ -104,7 +104,7 @@ def main():
   for bug_id in args:
     bugmon = BugMonitor(API_ROOT, API_KEY, bug_id, options.repobase, options)
 
-    print "====== Analyzing bug " + str(bug_id) + " ======"
+    print("====== Analyzing bug " + str(bug_id) + " ======")
     try:
       if options.verifyfixed:
         bugmon.verifyFixedBug(options.updatebug)
@@ -116,11 +116,11 @@ def main():
         raise BugException("Unsupported action requested")
         # result = bugmon.reproduceBug(bug_id)
     except BugException as b:
-      print "Cannot process bug: " + str(b)
-      print traceback.format_exc()
+      print("Cannot process bug: " + str(b))
+      print(traceback.format_exc())
     except Exception as e:
-      print "Caught exception: " + str(e)
-      print traceback.format_exc()
+      print("Caught exception: " + str(e))
+      print(traceback.format_exc())
 
 
 class BugException(Exception):
@@ -218,7 +218,7 @@ class BugMonitor:
 
       if result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
         if updateBug:
-          print "Marking bug " + str(self.bug.id) + " as verified fixed..."
+          print("Marking bug " + str(self.bug.id) + " as verified fixed...")
           # Mark VERIFIED FIXED now
           bugVerified = True
           bugModified = True
@@ -226,7 +226,7 @@ class BugMonitor:
           # Add a comment
           comments.append("JSBugMon: This bug has been automatically verified fixed.")
         else:
-          print "Would mark bug " + str(self.bug.id) + " as verified fixed..."
+          print("Would mark bug " + str(self.bug.id) + " as verified fixed...")
 
     for branchNum in range(self.centralVersion - 3, self.centralVersion):
       statusFlagName = 'cf_status_firefox' + str(branchNum)
@@ -235,19 +235,19 @@ class BugMonitor:
         branchRepoRev = self.hgFindFixParent(os.path.join(self.repoBase, branchRepo))
 
         if branchRepoRev is None:
-          print "Unable to find fix parent for bug %s on repository %s" % (str(self.bug.id), branchRepo)
+          print("Unable to find fix parent for bug %s on repository %s" % (str(self.bug.id), branchRepo))
           continue
 
         result = self.reproduceBug(branchRepo, branchRepoRev)
 
         if result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
           if updateBug:
-            print "Marking bug " + str(self.bug.id) + " as verified fixed on Fx" + str(branchNum) + " ..."
+            print("Marking bug " + str(self.bug.id) + " as verified fixed on Fx" + str(branchNum) + " ...")
             verifiedFlags.append(statusFlagName)
             bugModified = True
             comments.append("JSBugMon: This bug has been automatically verified fixed on Fx" + str(branchNum))
           else:
-            print "Would mark bug " + str(self.bug.id) + " as verified fixed on Fx" + str(branchNum) + " ..."
+            print("Would mark bug " + str(self.bug.id) + " as verified fixed on Fx" + str(branchNum) + " ...")
 
     if bugModified:
       while True:
@@ -264,17 +264,17 @@ class BugMonitor:
             self.bug.update()
           break
         except Exception as e:
-          print "Caught exception: " + str(e)
-          print traceback.format_exc()
+          print("Caught exception: " + str(e))
+          print(traceback.format_exc())
           time.sleep(1)
         except:
-          print "Failed to submit bug change, sleeping one second and retrying..."
+          print("Failed to submit bug change, sleeping one second and retrying...")
           time.sleep(1)
 
     if len(comments) > 0:
       comment = "\n".join(comments)
-      print "Commenting: "
-      print comment
+      print("Commenting: ")
+      print(comment)
       self.bug.add_comment(comment)
     return
 
@@ -312,16 +312,16 @@ class BugMonitor:
 
       if result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
         if updateBugPositive or bugConfirmRequested:
-          print "Marking bug " + str(self.bug.id) + " as confirmed on tip..."
+          print("Marking bug " + str(self.bug.id) + " as confirmed on tip...")
           # Add a comment
           comments.append(
             "JSBugMon: This bug has been automatically confirmed to be still valid (reproduced on revision " + result.tipRev + ").")
           bugUpdated = True
         else:
-          print "Would mark bug " + str(self.bug.id) + " as confirmed on tip..."
+          print("Would mark bug " + str(self.bug.id) + " as confirmed on tip...")
       elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
         if updateBug or bugUpdateRequested:
-          print "Marking bug " + str(self.bug.id) + " as non-reproducing on tip..."
+          print("Marking bug " + str(self.bug.id) + " as non-reproducing on tip...")
           # Add a comment
           comments.append(
             "JSBugMon: The testcase found in this bug no longer reproduces (tried revision " + result.tipRev + ").")
@@ -330,7 +330,7 @@ class BugMonitor:
           # Close bug only if requested to do so
           closeBug = bugCloseRequested
         else:
-          print "Would mark bug " + str(self.bug.id) + " as non-reproducing on tip..."
+          print("Would mark bug " + str(self.bug.id) + " as non-reproducing on tip...")
 
       if bugUpdated:
         wb = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', r'\1,ignore', self.bug.whiteboard)
@@ -349,15 +349,15 @@ class BugMonitor:
             self.bug.update()
             break
           except Exception as e:
-            print e
-            print "Failed to submit bug change, sleeping one second and retrying..."
+            print(e)
+            print("Failed to submit bug change, sleeping one second and retrying...")
             time.sleep(1)
 
       if len(comments) > 0:
         comment = "\n".join(comments)
-        print "Posting comment: "
-        print comment
-        print ""
+        print("Posting comment: ")
+        print(comment)
+        print("")
         self.bug.add_comment(comment)
 
     return
@@ -407,7 +407,7 @@ class BugMonitor:
       if 'bisect-force-compile' in wbOpts:
         bugBisectForceCompile = True
 
-      print wbOpts
+      print(wbOpts)
 
       comments = []
 
@@ -426,19 +426,19 @@ class BugMonitor:
               for branch in branches:
                 if not branch in self.branches:
                   continue
-                print "Branch " + branch
+                print("Branch " + branch)
                 branchResult = self.reproduceBug(branch)
                 if branchResult.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
-                  print "Marking bug " + str(self.bug.id) + " as reproducing on branch " + branch + " ..."
+                  print("Marking bug " + str(self.bug.id) + " as reproducing on branch " + branch + " ...")
                   # Add a comment
                   comments.append(
                     "JSBugMon: This bug has been automatically confirmed to be still valid on branch " + branch + "  (reproduced on revision " + branchResult.tipRev + ").")
                 elif branchResult.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-                  print "Marking bug " + str(self.bug.id) + " as non-reproducing on branch " + branch + " ..."
+                  print("Marking bug " + str(self.bug.id) + " as non-reproducing on branch " + branch + " ...")
                   comments.append(
                     "JSBugMon: The testcase found in this bug does not reproduce on branch " + branch + " (tried revision " + branchResult.tipRev + ").")
                 else:
-                  print "Marking bug " + str(self.bug.id) + " as not processable ..."
+                  print("Marking bug " + str(self.bug.id) + " as not processable ...")
                   comments.append(
                     "JSBugMon: Command failed during processing this bug: " + opt + " (branch " + branch + ")")
 
@@ -447,17 +447,17 @@ class BugMonitor:
           if result is None:
             result = self.reproduceBug()
           if result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
-            print "Marking bug " + str(self.bug.id) + " as cannot verify fixed..."
+            print("Marking bug " + str(self.bug.id) + " as cannot verify fixed...")
             # Add a comment
             comments.append(
               "JSBugMon: Cannot confirm fix, issue is still valid. (tried revision " + result.tipRev + ").")
           elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-            print "Marking bug " + str(self.bug.id) + " as verified fixed..."
+            print("Marking bug " + str(self.bug.id) + " as verified fixed...")
             comments.append(
               "JSBugMon: This bug has been automatically verified fixed. (tried revision " + result.tipRev + ").")
             verifyBug = True
           else:
-            print "Marking bug " + str(self.bug.id) + " as not processable ..."
+            print("Marking bug " + str(self.bug.id) + " as not processable ...")
             comments.append("JSBugMon: Command failed during processing this bug: verify")
 
       if bugUpdateRequested:
@@ -472,21 +472,21 @@ class BugMonitor:
               raise
             except Exception as e:
               bugFailureMsg = "JSBugMon: Cannot process bug: Unknown exception (check manually)"
-              print "Caught exception: " + str(e)
-              print traceback.format_exc()
+              print("Caught exception: " + str(e))
+              print(traceback.format_exc())
 
           if result is not None:
             if (
                 result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP or result.status == BugMonitorResult.statusCodes.REPRODUCED_SWITCHED):
               bugReproduced = True
               if bugConfirmRequested:
-                print "Marking bug " + str(self.bug.id) + " as confirmed on tip..."
+                print("Marking bug " + str(self.bug.id) + " as confirmed on tip...")
                 # Add a comment
                 comments.append(
                   "JSBugMon: This bug has been automatically confirmed to be still valid (reproduced on revision " + result.tipRev + ").")
 
             elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-              print "Marking bug " + str(self.bug.id) + " as non-reproducing on tip..."
+              print("Marking bug " + str(self.bug.id) + " as non-reproducing on tip...")
               # Add a comment
               comments.append(
                 "JSBugMon: The testcase found in this bug no longer reproduces (tried revision " + result.tipRev + ").")
@@ -510,10 +510,10 @@ class BugMonitor:
             bisectComments.append("")
         if (result is not None and (
             result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP or result.status == BugMonitorResult.statusCodes.REPRODUCED_SWITCHED or result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED)):
-          print "Bisecting bug " + str(self.bug.id) + " ..."
+          print("Bisecting bug " + str(self.bug.id) + " ...")
           bisectComment = self.bisectBug(result, forceCompile=bugBisectForceCompile)
           if bisectComment is not None:
-            print bisectComment
+            print(bisectComment)
             if len(bisectComment) > 0:
               bisectComments.append("JSBugMon: Bisection requested, result:")
               bisectComments.extend(bisectComment)
@@ -532,10 +532,10 @@ class BugMonitor:
             bisectComments.append("JSBugMon: Fix Bisection requested, failed due to error: " + str(b))
             bisectComments.append("")
         if result is not None and result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-          print "Bisecting fix for bug " + str(self.bug.id) + " ..."
+          print("Bisecting fix for bug " + str(self.bug.id) + " ...")
           bisectComment = self.bisectBug(result, bisectForFix=True, forceCompile=bugBisectForceCompile)
           if bisectComment is not None:
-            print bisectComment
+            print(bisectComment)
             if len(bisectComment) > 0:
               bisectFixComments.append("JSBugMon: Fix Bisection requested, result:")
               bisectFixComments.extend(bisectComment)
@@ -600,18 +600,18 @@ class BugMonitor:
             self.bug.update()
           break
         except Exception as e:
-          print "Caught exception: " + str(e)
-          print traceback.format_exc()
+          print("Caught exception: " + str(e))
+          print(traceback.format_exc())
           time.sleep(1)
         except:
-          print "Failed to submit bug change, sleeping one second and retrying..."
+          print("Failed to submit bug change, sleeping one second and retrying...")
           time.sleep(1)
 
       if len(comments) > 0:
         comment = "\n".join(comments)
-        print "Posting comment: "
-        print comment
-        print ""
+        print("Posting comment: ")
+        print(comment)
+        print("")
         self.bug.add_comment(comment)
 
     return
@@ -626,7 +626,7 @@ class BugMonitor:
 
     cmd = ['python', '/srv/repos/funfuzz/autobisect-js/autoBisect.py', '-T', '-b', buildOpts, '-p',
            " ".join(reproductionResult.testFlags) + " " + reproductionResult.testPath, '-i', 'crashes', '--timeout=10']
-    print "DEBUG: Attempting binary bisection: %s" % str(cmd)
+    print("DEBUG: Attempting binary bisection: %s" % str(cmd))
     outLines = None
     try:
       outLines = subprocess.check_output(cmd).split("\n")
@@ -662,7 +662,7 @@ class BugMonitor:
     cmd = ['python', '/srv/repos/funfuzz/autobisect-js/autoBisect.py', '-b', buildOpts, revFlag,
            reproductionResult.origRev, '-p', " ".join(reproductionResult.testFlags) + " " + reproductionResult.testPath,
            '-i', 'crashes', '--timeout=10']
-    print "DEBUG: %s" % str(cmd)
+    print("DEBUG: %s" % str(cmd))
     outLines = None
     try:
       outLines = subprocess.check_output(cmd).split("\n")
@@ -755,7 +755,7 @@ class BugMonitor:
     if '--enable-experimental-fields' in opts:
       scanOpts.append('--enable-experimental-fields')
 
-    print "Extracted options: %s" % (' '.join(opts))
+    print("Extracted options: %s" % (' '.join(opts)))
 
     # Special hack for flags that changed
     if "--ion-parallel-compile=off" in opts:
@@ -791,8 +791,8 @@ class BugMonitor:
     if tipBranchRev is not None:
       repoDir = tipRepoDir
 
-    print "Using repository at %s with revision %s for initial reproduction" % (repoDir, rev)
-    print "Using repository at %s with tip revision for testing" % tipRepoDir
+    print("Using repository at %s with revision %s for initial reproduction" % (repoDir, rev))
+    print("Using repository at %s with tip revision for testing" % tipRepoDir)
 
     arch = None
     archList = None
@@ -822,7 +822,7 @@ class BugMonitor:
       (testShell, testRev) = self.getShell("cache/", arch, "dbg", 0, rev, False, repoDir, buildFlags)
     except Exception:
       trace = sys.exc_info()[2]
-      raise InternalException("Failed to compile tip shell (toolchain broken?)"), None, trace
+      raise InternalException("Failed to compile tip shell (toolchain broken?)").with_traceback(trace)
 
     # If the file already exists, then we can reuse it
     if testCommentIdx > 0:
@@ -831,7 +831,7 @@ class BugMonitor:
       testFile = "bug" + str(self.bug.id) + ".js"
 
     if os.path.exists(testFile):
-      print "Using existing (cached) testfile " + testFile
+      print("Using existing (cached) testfile " + testFile)
     else:
 
       # We need to detect where our test is.
@@ -843,7 +843,7 @@ class BugMonitor:
         outFile = open(testFile, "w")
         outFile.write(block)
         outFile.close()
-        print "Testing syntax with shell %s" % testShell
+        print("Testing syntax with shell %s" % testShell)
         (err, ret) = testBinary(testShell, testFile, scanOpts, 0, timeout=30)
 
         if err.find("SyntaxError") < 0:
@@ -870,7 +870,7 @@ class BugMonitor:
                 oldBlock = curBlock
 
           found = True
-          print "Isolated possible testcase starting in textblock " + str(cnt)
+          print("Isolated possible testcase starting in textblock " + str(cnt))
           break
         cnt += 1
       if not found:
@@ -926,7 +926,7 @@ class BugMonitor:
         if oret < 0:
           break
 
-        print ""
+        print("")
 
       # If we reproduced with dbg, then we don't need to try opt
       if oret < 0:
@@ -934,19 +934,19 @@ class BugMonitor:
 
     # Check if we reproduced at all (dbg or opt)
     if oret < 0:
-      print ""
-      print "Successfully reproduced bug (exit code " + str(oret) + ") on original revision " + rev + ":"
+      print("")
+      print("Successfully reproduced bug (exit code " + str(oret) + ") on original revision " + rev + ":")
       errl = oouterr.split("\n")
       if len(errl) > 2: errl = errl[-2:]
       for err in errl:
-        print err
+        print(err)
 
       # Try running on tip now
-      print "Testing bug on tip..."
+      print("Testing bug on tip...")
 
       # Update to tip and cache result:
       updated = False
-      if not self.tipRev.has_key(tipRepoDir):
+      if tipRepoDir not in self.tipRev:
         # If we don't know the tip revision for this branch, update and get it
         self.tipRev[tipRepoDir] = self.hgUpdate(tipRepoDir)
         updated = True
@@ -956,7 +956,7 @@ class BugMonitor:
                                            tipRepoDir, buildFlags)
       except Exception:
         trace = sys.exc_info()[2]
-        raise InternalException("Failed to compile tip shell (toolchain broken?)"), None, trace
+        raise InternalException("Failed to compile tip shell (toolchain broken?)").with_traceback(trace)
 
       tipOpts = None
       for opts in viableOptsList:
@@ -968,25 +968,25 @@ class BugMonitor:
       if tret < 0:
         if tret == oret:
           if opts == tipOpts:
-            print "Result: Bug still reproduces"
+            print("Result: Bug still reproduces")
             return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
                                     buildFlags, BugMonitorResult.statusCodes.REPRODUCED_TIP)
           else:
-            print "Result: Bug still reproduces, but with different options: " + " ".join(
-              tipOpts)  # TODO need another code here in the future
+            print("Result: Bug still reproduces, but with different options: " + " ".join(
+              tipOpts))  # TODO need another code here in the future
             return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
                                     buildFlags, BugMonitorResult.statusCodes.REPRODUCED_TIP)
         else:
           # Unlikely but possible, switched signal
-          print "Result: Bug now reproduces with signal " + str(tret) + " (previously " + str(oret) + ")"
+          print("Result: Bug now reproduces with signal " + str(tret) + " (previously " + str(oret) + ")")
           return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
                                   buildFlags, BugMonitorResult.statusCodes.REPRODUCED_SWITCHED)
       else:
-        print "Result: Bug no longer reproduces"
+        print("Result: Bug no longer reproduces")
         return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
                                 buildFlags, BugMonitorResult.statusCodes.REPRODUCED_FIXED)
     else:
-      print "Error: Failed to reproduce bug on original revision"
+      print("Error: Failed to reproduce bug on original revision")
       # return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType, buildFlags, BugMonitorResult.statusCodes.FAILED)
       return BugMonitorResult(reponame, rev, None, opts, testFile, archType, compileType, buildFlags,
                               BugMonitorResult.statusCodes.FAILED)
@@ -1027,7 +1027,7 @@ class BugMonitor:
 
   def hgUpdate(self, repoDir, rev=None):
     try:
-      print "Running hg update..."
+      print("Running hg update...")
       if rev is not None:
         captureStdout(['hg', 'update', '-C', '-r', rev], ignoreStderr=True, currWorkingDir=repoDir)
       else:
@@ -1044,7 +1044,7 @@ class BugMonitor:
       # os.chdir(savedPath)
       return hgIdChangesetHash
     except:
-      print "Unexpected error while updating HG:", sys.exc_info()[0]
+      print("Unexpected error while updating HG:", sys.exc_info()[0])
       sys.exit(1)
 
   def getShell(self, shellCacheDir, archNum, compileType, valgrindSupport, rev, updated, repoDir, buildFlags=None):
@@ -1057,7 +1057,7 @@ class BugMonitor:
       haveDebugOptFlags = ('--enable-debug' in buildFlags) or ('--disable-debug' in buildFlags) or (
           '--enable-optimize' in buildFlags) or ('--disable-optimize' in buildFlags)
 
-    print "haveDebugOptFlags: %s %s" % (str(haveDebugOptFlags), " ".join(buildFlags))
+    print("haveDebugOptFlags: %s %s" % (str(haveDebugOptFlags), " ".join(buildFlags)))
 
     if compileType == 'dbg':
       if buildFlags is not None:
@@ -1084,9 +1084,9 @@ class BugMonitor:
     if shell is None:
       if rev is None:
         rev = self.hgUpdate(repoDir, rev)
-        print "Compiling a new shell for tip (revision " + rev + ")"
+        print("Compiling a new shell for tip (revision " + rev + ")")
       else:
-        print "Compiling a new shell for revision " + rev
+        print("Compiling a new shell for revision " + rev)
       shell = captureStdout(['/srv/repos/funfuzz/js/compileShell.py', '-b', buildOpts, '-r', rev])[0].split("\n")[-1]
 
     return shell, rev

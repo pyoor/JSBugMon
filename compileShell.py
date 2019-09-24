@@ -55,11 +55,11 @@ def testBinary(shell, filename, flagsRequired, valgSupport, verbose=False, timeo
     p.terminate()
 
   if verbose:
-    print 'The exit code is:', retCode
+    print('The exit code is:', retCode)
     if len(out) > 0:
-      print 'stdout shows:', out
+      print('stdout shows:', out)
     if len(err) > 0:
-      print 'stderr shows:', err
+      print('stderr shows:', err)
 
   # Switch to interactive input mode similar to `cat testcase.js | ./js -j -i`.
   # Doesn't work, stdout shows:

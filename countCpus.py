@@ -13,7 +13,7 @@ def cpuCount():
   """
   # POSIX platforms
   if hasattr(os, 'sysconf'):
-    if os.sysconf_names.has_key('SC_NPROCESSORS_ONLN'):
+    if 'SC_NPROCESSORS_ONLN' in os.sysconf_names:
       # Linux
       cpuNum = os.sysconf('SC_NPROCESSORS_ONLN')
       if cpuNum > 0 and isinstance(cpuNum, int):
@@ -22,7 +22,7 @@ def cpuCount():
       # Mac OS X
       return int(os.popen2('sysctl -n hw.ncpu')[1].read())
   # Windows
-  if os.environ.has_key('NUMBER_OF_PROCESSORS'):
+  if 'NUMBER_OF_PROCESSORS' in os.environ:
     cpuNum = int(os.environ['NUMBER_OF_PROCESSORS'])
     if cpuNum > 0:
       return cpuNum

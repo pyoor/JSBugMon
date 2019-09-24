@@ -41,7 +41,7 @@ options = {
 # Get the bugs from the api
 buglist = bmo.get_bug_list(options)
 
-print "Found %s bugs" % (len(buglist))
+print("Found %s bugs" % (len(buglist)))
 
 # Basic arguments
 cmd = ['python', os.path.join(sys.path[0], 'bugmon.py'), '-r', os.path.join(sys.path[0], 'repos/'), "-C", "-G"]
@@ -54,7 +54,7 @@ for bug in buglist:
   cmd.append(str(bug.id))
 
 # Print command
-print " ".join(cmd)
+print(" ".join(cmd))
 
 # Run command
 sys.exit(subprocess.call(cmd))
