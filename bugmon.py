@@ -27,7 +27,7 @@ from optparse import OptionParser
 
 from bugsy import Bugsy
 
-from compileShell import testBinary
+from test_binary import testBinary
 from subprocesses import captureStdout
 
 
