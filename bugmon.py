@@ -290,7 +290,7 @@ class BugMonitor:
       wbOpts = []
       if self.bug.whiteboard:
         ret = re.compile('\[jsbugmon:([^\]]+)\]').search(self.bug.whiteboard)
-        if ret is not None and ret.groups > 1:
+        if ret:
           wbOpts = ret.group(1).split(",")
 
       # Explicitly marked to ignore this bug
@@ -379,7 +379,7 @@ class BugMonitor:
     wbOpts = []
     if self.bug.whiteboard is not None:
       ret = re.compile('\[jsbugmon:([^\]]+)\]').search(self.bug.whiteboard)
-      if ret is not None and ret.groups > 1:
+      if ret:
         wbOpts = ret.group(1).split(",")
 
       # Explicitly marked to ignore this bug
@@ -700,7 +700,7 @@ class BugMonitor:
 
     if self.bug.whiteboard is not None:
       ret = re.compile('\[jsbugmon:([^\]]+)\]').search(self.bug.whiteboard)
-      if ret is not None and ret.groups > 1:
+      if ret:
         wbOpts = ret.group(1).split(",")
         for opt in wbOpts:
           if opt.find("=") > 0:
@@ -993,7 +993,7 @@ class BugMonitor:
 
   def extractOptions(self, text):
     ret = re.compile('((?: \-[a-z])+)', re.DOTALL).search(text)
-    if ret is not None and ret.groups > 1:
+    if ret:
       return ret.group(1).lstrip().split(" ")
 
     return None
