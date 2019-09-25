@@ -4,17 +4,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import os
 import platform
-import subprocess
-import sys
-
-path0 = os.path.dirname(__file__)
-path1 = os.path.abspath(os.path.join(path0, os.pardir, 'util'))
-sys.path.append(path1)
-from subprocesses import vdump
-
 import signal
+import subprocess
 
 
 class Alarm(Exception):
@@ -36,7 +28,7 @@ def testBinary(shell, filename, flagsRequired, valgSupport, verbose=False, timeo
     valgPrefixCmd.append('--smc-check=all-non-file')
     valgPrefixCmd.append('--leak-check=full')
     testBinaryCmd = valgPrefixCmd + testBinaryCmd
-  vdump('The testing command is:' + ' '.join(testBinaryCmd))
+  print('The testing command is:' + ' '.join(testBinaryCmd))
 
   # Capture stdout and stderr into the same string.
   p = subprocess.Popen(testBinaryCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
