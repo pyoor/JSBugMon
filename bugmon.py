@@ -66,17 +66,15 @@ class BugMonitorResult:
 
 class BugMonitor:
 
-  def __init__(self, apiroot, apikey, bugnum, repoBase, options):
-    self.apiroot = apiroot
-    self.bugsy = Bugsy(api_key=apikey, bugzilla_url=apiroot)
-    self.bug = self.bugsy.get(bugnum, '_default')
-
-    self.repoBase = repoBase
+  def __init__(self, api_root, api_key, bug_num, repo_root, options):
+    self.bugsy = Bugsy(api_key=api_key, bugzilla_url=api_root)
+    self.bug = self.bugsy.get(bug_num, '_default')
+    self.repo_root = repo_root
 
     # Here we store the tip revision per repository for caching purposes
-    self.tipRev = {}
+    self.tip_rev = {}
 
-    self.allowedOpts = [
+    self.allowed_opts = [
       '--fuzzing-safe',
       '--ion-eager',
       '--baseline-eager',
@@ -110,7 +108,7 @@ class BugMonitor:
       '-D'
     ]
 
-    milestone = os.path.join(repoBase, 'mozilla-central', 'config', 'milestone.txt')
+    milestone = os.path.join(repo_root, 'mozilla-central', 'config', 'milestone.txt')
     with open(milestone, 'r') as f:
       last = f.readlines()[-1]
       self.centralVersion = int(last.split('.', 1)[0])
@@ -145,7 +143,7 @@ class BugMonitor:
       statusFlagName = 'cf_status_firefox' + str(branchNum)
       if getattr(self.bug, statusFlagName) == 'fixed':
         branchRepo = self.branches[self.centralVersion - branchNum]
-        branchRepoRev = self.hgFindFixParent(os.path.join(self.repoBase, branchRepo))
+        branchRepoRev = self.hgFindFixParent(os.path.join(self.repo_root, branchRepo))
 
         if branchRepoRev is None:
           print("Unable to find fix parent for bug %s on repository %s" % (str(self.bug.id), branchRepo))
@@ -533,7 +531,7 @@ class BugMonitor:
     if forceCompile:
       return self.bisectBugCompile(reproductionResult, bisectForFix)
 
-    buildOpts = '-R %s' % (os.path.join(self.repoBase, reproductionResult.branchName))
+    buildOpts = '-R %s' % (os.path.join(self.repo_root, reproductionResult.branchName))
     if reproductionResult.buildFlags is not None and len(reproductionResult.buildFlags) > 0:
       buildOpts += ' %s' % " ".join(reproductionResult.buildFlags)
 
@@ -568,7 +566,7 @@ class BugMonitor:
     if bisectForFix:
       revFlag = '-s'
 
-    buildOpts = '-R %s' % (os.path.join(self.repoBase, reproductionResult.branchName))
+    buildOpts = '-R %s' % (os.path.join(self.repo_root, reproductionResult.branchName))
     if reproductionResult.buildFlags is not None and len(reproductionResult.buildFlags) > 0:
       buildOpts += ' %s' % " ".join(reproductionResult.buildFlags)
 
@@ -658,7 +656,7 @@ class BugMonitor:
     viableOptsList = []
     opts = []
 
-    for opt in self.allowedOpts:
+    for opt in self.allowed_opts:
       if text.find(opt) != -1:
         opts.append(opt)
 
@@ -691,13 +689,13 @@ class BugMonitor:
       raise BugException("Error: Unsupported branch \"" + self.bug.version + "\" required by bug")
 
     # Default to using the bug.version field as repository specifier
-    repoDir = os.path.join(self.repoBase, reponame)
+    repoDir = os.path.join(self.repo_root, reponame)
 
     # If told to use a different tipBranch, use that for tip testing
     if tipBranch is None:
       tipBranch = reponame
 
-    tipRepoDir = os.path.join(self.repoBase, tipBranch)
+    tipRepoDir = os.path.join(self.repo_root, tipBranch)
 
     # If we are given a specific revision even for testing, then use
     # the tipBranch for all testing, including initial reproduction
@@ -859,13 +857,13 @@ class BugMonitor:
 
       # Update to tip and cache result:
       updated = False
-      if tipRepoDir not in self.tipRev:
+      if tipRepoDir not in self.tip_rev:
         # If we don't know the tip revision for this branch, update and get it
-        self.tipRev[tipRepoDir] = self.hgUpdate(tipRepoDir)
+        self.tip_rev[tipRepoDir] = self.hgUpdate(tipRepoDir)
         updated = True
 
       try:
-        (tipShell, tipRev) = self.getShell("cache/", archType, compileType, 0, self.tipRev[tipRepoDir], updated,
+        (tipShell, tipRev) = self.getShell("cache/", archType, compileType, 0, self.tip_rev[tipRepoDir], updated,
                                            tipRepoDir, buildFlags)
       except Exception:
         trace = sys.exc_info()[2]
@@ -882,21 +880,21 @@ class BugMonitor:
         if tret == oret:
           if opts == tipOpts:
             print("Result: Bug still reproduces")
-            return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
+            return BugMonitorResult(reponame, rev, self.tip_rev[tipRepoDir], opts, testFile, archType, compileType,
                                     buildFlags, BugMonitorResult.statusCodes.REPRODUCED_TIP)
           else:
             print("Result: Bug still reproduces, but with different options: " + " ".join(
               tipOpts))  # TODO need another code here in the future
-            return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
+            return BugMonitorResult(reponame, rev, self.tip_rev[tipRepoDir], opts, testFile, archType, compileType,
                                     buildFlags, BugMonitorResult.statusCodes.REPRODUCED_TIP)
         else:
           # Unlikely but possible, switched signal
           print("Result: Bug now reproduces with signal " + str(tret) + " (previously " + str(oret) + ")")
-          return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
+          return BugMonitorResult(reponame, rev, self.tip_rev[tipRepoDir], opts, testFile, archType, compileType,
                                   buildFlags, BugMonitorResult.statusCodes.REPRODUCED_SWITCHED)
       else:
         print("Result: Bug no longer reproduces")
-        return BugMonitorResult(reponame, rev, self.tipRev[tipRepoDir], opts, testFile, archType, compileType,
+        return BugMonitorResult(reponame, rev, self.tip_rev[tipRepoDir], opts, testFile, archType, compileType,
                                 buildFlags, BugMonitorResult.statusCodes.REPRODUCED_FIXED)
     else:
       print("Error: Failed to reproduce bug on original revision")
@@ -1057,12 +1055,12 @@ def main():
   (options, args) = parseOpts()
 
   # Get the API root, default to bugzilla.mozilla.org
-  API_ROOT = os.environ.get('BZ_API_ROOT')
-  API_KEY = os.environ.get('BZ_API_KEY')
+  api_root = os.environ.get('BZ_API_ROOT')
+  api_key = os.environ.get('BZ_API_KEY')
 
   # Sample run
   for bug_id in args:
-    bugmon = BugMonitor(API_ROOT, API_KEY, bug_id, options.repobase, options)
+    bugmon = BugMonitor(api_root, api_key, bug_id, options.repobase, options)
 
     print("====== Analyzing bug " + str(bug_id) + " ======")
     try:
