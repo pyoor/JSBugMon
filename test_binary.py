@@ -31,7 +31,7 @@ def testBinary(shell, filename, flagsRequired, valgSupport, verbose=False, timeo
   print('The testing command is:' + ' '.join(testBinaryCmd))
 
   # Capture stdout and stderr into the same string.
-  p = subprocess.Popen(testBinaryCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  p = subprocess.Popen(testBinaryCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
   (out, err) = ('', '')
   retCode = 0
@@ -74,7 +74,8 @@ def testBinary(shell, filename, flagsRequired, valgSupport, verbose=False, timeo
   #    retCode = testBinaryCmd3.returncode
   #    print 'The exit code is:', retCode
   #    print 'The second output is:', output2
-  return out + "\n" + err, retCode
+  combined = '\n'.join([out, err])
+  return combined, retCode
 
 
 if __name__ == '__main__':
