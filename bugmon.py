@@ -22,7 +22,7 @@ import subprocess
 import sys
 import time
 import traceback
-from optparse import OptionParser
+import argparse
 
 from bugsy import Bugsy
 from funfuzz.js.build_options import parse_shell_opts
@@ -994,90 +994,67 @@ class BugMonitor:
     return path, rev
 
 
-def parseOpts():
-  usage = 'Usage: %prog [options] bugid [bugid ..]'
-  parser = OptionParser(usage)
-  # See http://docs.python.org/library/optparse.html#optparse.OptionParser.disable_interspersed_args
-  parser.disable_interspersed_args()
+def parse_args(argv=None):
+  parser = argparse.ArgumentParser()
 
-  # Define the repository base.
-  parser.add_option('-r', '--repobase',
-                    dest='repobase',
-                    default=None,
-                    help='Repository base directory, mandatory.')
+  actions = parser.add_mutually_exclusive_group(required=True)
+  actions.add_argument('-c', '--confirm',
+                       action='store_true',
+                       help='Attempt to confirm open bugs')
+  actions.add_argument('-v', '--verify-fixed',
+                       action='store_true',
+                       help='Verify fix and comment')
+  actions.add_argument('-p', '--process',
+                       action='store_true',
+                       help='Process commands on listed in bug whiteboard')
 
-  parser.add_option('-v', '--verbose',
-                    dest='verbose',
-                    action='store_true',
-                    default=False,
-                    help='Be verbose. Defaults to "False"')
+  # Optional args
+  parser.add_argument('-u', '--update-bug',
+                      action='store_true',
+                      help='Update the bug')
+  parser.add_argument('-P', '--update-bug-positive',
+                      action='store_true',
+                      default=False,
+                      help='Update the bug when even if state isn\'t changed')
+  # Required args
+  parser.add_argument('-r', '--repobase',
+                      default=None,
+                      required=True,
+                      help='Repository base directory.')
+  parser.add_argument('bugs', nargs='+', help='Space separated list of bug numbers')
 
-  parser.add_option('-V', '--verify-fixed',
-                    dest='verifyfixed',
-                    action='store_true',
-                    default=False,
-                    help='Verify fix and comment. Defaults to "False"')
+  args = parser.parse_args(argv)
 
-  parser.add_option('-C', '--confirm',
-                    dest='confirm',
-                    action='store_true',
-                    default=False,
-                    help='Attempt to confirm (or deny) open bugs. Defaults to "False"')
+  if args.update_bug_positive and not args.confirm:
+    raise parser.error('Option update-bug-positive only applicable with --confirm')
 
-  parser.add_option('-p', '--process',
-                    dest='process',
-                    action='store_true',
-                    default=False,
-                    help='Process commands on whiteboard of the bug. Defaults to "False"')
-
-  parser.add_option('-U', '--update-bug',
-                    dest='updatebug',
-                    action='store_true',
-                    default=False,
-                    help='Update the bug. Defaults to "False"')
-
-  parser.add_option('-P', '--update-bug-positive',
-                    dest='updatebugpositive',
-                    action='store_true',
-                    default=False,
-                    help='Update the bug also when it not changes state. Defaults to "False"')
-
-  (options, args) = parser.parse_args()
-
-  if len(args) < 1:
-    parser.error('Not enough arguments')
-
-  return options, args
+  return args
 
 
-def main():
-  # Script options
-  (options, args) = parseOpts()
+def main(argv=None):
+  args = parse_args(argv)
 
   # Get the API root, default to bugzilla.mozilla.org
   api_root = os.environ.get('BZ_API_ROOT')
   api_key = os.environ.get('BZ_API_KEY')
 
   # Sample run
-  for bug_id in args:
-    bugmon = BugMonitor(api_root, api_key, bug_id, options.repobase, options)
+  for bug_id in args.bugs:
+    bugmon = BugMonitor(api_root, api_key, bug_id, args.repobase, None)
 
-    print("====== Analyzing bug " + str(bug_id) + " ======")
+    print("====== Analyzing bug {0} ======".format(bug_id))
     try:
-      if options.verifyfixed:
-        bugmon.verifyFixedBug(options.updatebug)
-      elif options.confirm:
-        bugmon.confirmOpenBug(options.updatebug, options.updatebugpositive)
-      elif options.process:
+      if args.verify_fixed:
+        bugmon.verifyFixedBug(args.update_bug)
+      elif args:
+        bugmon.confirmOpenBug(args.update_bug, args.update_bug_positive)
+      elif args.process:
         bugmon.processCommand()
-      else:
-        raise BugException("Unsupported action requested")
-        # result = bugmon.reproduceBug(bug_id)
     except BugException as b:
-      print("Cannot process bug: " + str(b))
+      print("Cannot process bug: {0}".format(str(b)))
       print(traceback.format_exc())
     except Exception as e:
-      print("Caught exception: " + str(e))
+      print("Uncaught exception: {0}".format(str(e)))
       print(traceback.format_exc())
 
 
