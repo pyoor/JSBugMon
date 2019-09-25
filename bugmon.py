@@ -66,7 +66,7 @@ class BugMonitorResult:
 
 class BugMonitor:
 
-  def __init__(self, api_root, api_key, bug_num, repo_root, options):
+  def __init__(self, api_root, api_key, bug_num, repo_root):
     self.bugsy = Bugsy(api_key=api_key, bugzilla_url=api_root)
     self.bug = self.bugsy.get(bug_num, '_default')
     self.repo_root = repo_root
@@ -114,9 +114,6 @@ class BugMonitor:
       self.centralVersion = int(last.split('.', 1)[0])
 
     self.branches = ['mozilla-central', 'mozilla-aurora', 'mozilla-beta', 'mozilla-release']
-
-    # Misc options
-    self.options = options
 
   def verifyFixedBug(self, updateBug):
     bugModified = False
@@ -829,7 +826,7 @@ class BugMonitor:
           raise BugException("Error: Failed to compile specified revision %s (maybe try another?)" % rev)
 
         for opts in viableOptsList:
-          (oouterr, oret) = testBinary(origShell, testFile, opts, 0, verbose=self.options.verbose, timeout=30)
+          (oouterr, oret) = testBinary(origShell, testFile, opts, 0, timeout=30)
           if oret < 0:
             break
 
@@ -871,7 +868,7 @@ class BugMonitor:
 
       tipOpts = None
       for opts in viableOptsList:
-        (touterr, tret) = testBinary(tipShell, testFile, opts, 0, verbose=self.options.verbose, timeout=30)
+        (touterr, tret) = testBinary(tipShell, testFile, opts, 0, timeout=30)
         if tret < 0:
           tipOpts = opts
           break
@@ -1040,7 +1037,7 @@ def main(argv=None):
 
   # Sample run
   for bug_id in args.bugs:
-    bugmon = BugMonitor(api_root, api_key, bug_id, args.repobase, None)
+    bugmon = BugMonitor(api_root, api_key, bug_id, args.repobase)
 
     print("====== Analyzing bug {0} ======".format(bug_id))
     try:
