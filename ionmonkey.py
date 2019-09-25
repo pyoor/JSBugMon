@@ -30,12 +30,12 @@ bmo = BMOAgent(username, password)
 
 # Search for all open IonMonkey fuzz bugs
 options = {
-  'resolution': '---',
-  'query_format': 'advanced',
-  'field0-0-0': 'blocked',
-  'type0-0-0': 'equals',
-  'value0-0-0': '724444',
-  'include_fields': '_default',
+    'resolution': '---',
+    'query_format': 'advanced',
+    'field0-0-0': 'blocked',
+    'type0-0-0': 'equals',
+    'value0-0-0': '724444',
+    'include_fields': '_default',
 }
 
 # Get the bugs from the api
@@ -51,7 +51,7 @@ cmd.extend(sys.argv[1:])
 
 # Append bug numbers
 for bug in buglist:
-  cmd.append(str(bug.id))
+    cmd.append(str(bug.id))
 
 # Print command
 print(" ".join(cmd))
