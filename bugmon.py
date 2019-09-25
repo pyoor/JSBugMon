@@ -17,7 +17,6 @@
 
 import base64
 import os
-import platform
 import re
 import subprocess
 import sys
@@ -30,7 +29,6 @@ from funfuzz.js.build_options import parse_shell_opts
 from funfuzz.js.compile_shell import CompiledShell
 
 from test_binary import testBinary
-from subprocesses import captureStdout
 
 
 def enum(*sequential, **named):
@@ -1011,9 +1009,9 @@ class BugMonitor:
 
   def hgFindFixParent(self, repoDir):
     prevRev = None
-    hgOut = captureStdout(['hg', 'log', '-l', '10000', '--template', '{node} {desc}\n'], ignoreStderr=True,
-                          currWorkingDir=repoDir)[0].split("\n")
-    for line in reversed(hgOut):
+    cmd = ['hg', 'log', '-l', '10000', '--template', '{node} {desc}\n']
+    output = subprocess.check_output(cmd, cwd=repoDir, universal_newlines=True)
+    for line in reversed(output.split('\n')):
       line = line.split(' ', 1)
 
       if len(line) < 2:
@@ -1027,27 +1025,18 @@ class BugMonitor:
       prevRev = rev
     return None
 
-  def hgUpdate(self, repoDir, rev=None):
+  def hgUpdate(self, repo_dir, rev=None):
     try:
       print("Running hg update...")
       if rev is not None:
-        captureStdout(['hg', 'update', '-C', '-r', rev], ignoreStderr=True, currWorkingDir=repoDir)
+        subprocess.check_call(['hg', 'update', '-C', '-r', rev], cwd=repo_dir)
       else:
-        captureStdout(['hg', 'update', '-C'], ignoreStderr=True, currWorkingDir=repoDir)
+        subprocess.check_call(['hg', 'update', '-C'], cwd=repo_dir)
 
-      hgIdCmdList = ['hg', 'identify', repoDir]
-      # In Windows, this throws up a warning about failing to set color mode to win32.
-      if platform.system() == 'Windows':
-        hgIdFull = captureStdout(hgIdCmdList, currWorkingDir=repoDir, ignoreStderr=True)[0]
-      else:
-        hgIdFull = captureStdout(hgIdCmdList, currWorkingDir=repoDir)[0]
-      hgIdChangesetHash = hgIdFull.split(' ')[0]
-
-      # os.chdir(savedPath)
-      return hgIdChangesetHash
-    except:
-      print("Unexpected error while updating HG:", sys.exc_info()[0])
-      sys.exit(1)
+      new_rev = subprocess.check_output(['hg', 'id', '-i'], cwd=repo_dir)
+      return new_rev.strip().decode('utf-8')
+    except Exception:
+      raise ("Unexpected error while updating HG:", sys.exc_info()[0])
 
   def getShell(self, shellCacheDir, archNum, compileType, valgrindSupport, rev, updated, repoDir, buildFlags=None):
     # This code maps the old "-c dbg / -c opt" configurations to their configurations
