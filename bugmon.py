@@ -26,6 +26,8 @@ import traceback
 from optparse import OptionParser
 
 from bugsy import Bugsy
+from funfuzz.js.build_options import parse_shell_opts
+from funfuzz.js.compile_shell import CompiledShell
 
 from test_binary import testBinary
 from subprocesses import captureStdout
@@ -1048,8 +1050,6 @@ class BugMonitor:
       sys.exit(1)
 
   def getShell(self, shellCacheDir, archNum, compileType, valgrindSupport, rev, updated, repoDir, buildFlags=None):
-    shell = None
-
     # This code maps the old "-c dbg / -c opt" configurations to their configurations
     haveDebugOptFlags = False
 
@@ -1081,15 +1081,17 @@ class BugMonitor:
     if buildFlags is not None and len(buildFlags) > 0:
       buildOpts += ' %s' % " ".join(buildFlags)
 
-    if shell is None:
-      if rev is None:
-        rev = self.hgUpdate(repoDir, rev)
-        print("Compiling a new shell for tip (revision " + rev + ")")
-      else:
-        print("Compiling a new shell for revision " + rev)
-      shell = captureStdout(['/srv/repos/funfuzz/js/compileShell.py', '-b', buildOpts, '-r', rev])[0].split("\n")[-1]
+    if rev is None:
+      rev = self.hgUpdate(repoDir, rev)
 
-    return shell, rev
+    print("Compiling a new shell for revision ", rev)
+
+    args = parse_shell_opts(buildOpts)
+    shell = CompiledShell(args, rev)
+    shell.run(["-b", buildOpts, "-r", rev])
+    path = str(shell.get_shell_cache_js_bin_path())
+
+    return path, rev
 
 
 if __name__ == '__main__':
