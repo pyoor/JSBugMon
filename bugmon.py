@@ -1042,6 +1042,8 @@ def parse_args(argv=None):
         raise parser.error('Option update-bug-positive only applicable with --confirm')
     if args.search_params and not os.path.isfile(args.search_params):
         raise parser.error('Search parameter path does not exist!')
+    if not os.path.isdir(args.repobase):
+        raise parser.error('Repobase path does not exist!')
 
     return args
 
