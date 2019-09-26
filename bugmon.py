@@ -17,6 +17,7 @@
 
 import argparse
 import base64
+import json
 import logging
 import os
 import re
@@ -25,7 +26,7 @@ import sys
 import time
 import traceback
 
-from bugsy import Bugsy
+from bugsy import Bugsy, Bug
 from funfuzz.js.build_options import parse_shell_opts
 from funfuzz.js.compile_shell import CompiledShell
 
@@ -1026,12 +1027,21 @@ def parse_args(argv=None):
                         default=None,
                         required=True,
                         help='Repository base directory.')
-    parser.add_argument('bugs', nargs='+', help='Space separated list of bug numbers')
+
+    # Bug selection
+    bug_list = parser.add_mutually_exclusive_group(required=True)
+    bug_list.add_argument('-b', '--bugs',
+                          nargs='+',
+                          help='Space separated list of bug numbers')
+    bug_list.add_argument('-s', '--search-params',
+                          help='Path to advanced search parameters')
 
     args = parser.parse_args(argv)
 
     if args.update_bug_positive and not args.confirm:
         raise parser.error('Option update-bug-positive only applicable with --confirm')
+    if args.search_params and not os.path.isfile(args.search_params):
+        raise parser.error('Search parameter path does not exist!')
 
     return args
 
@@ -1051,18 +1061,28 @@ def main(argv=None):
     api_root = os.environ.get('BZ_API_ROOT')
     api_key = os.environ.get('BZ_API_KEY')
 
-    # Sample run
-    for bug_id in args.bugs:
+    bug_ids = []
+    if args.bugs:
+        bug_ids.extend(args.bugs)
+    else:
+        bugsy = Bugsy(api_key=api_key, bugzilla_url=api_root)
+        with open(args.search_params) as f:
+            params = json.load(f)
+            response = bugsy.request('bug', params=params)
+            bugs = [Bug(bugsy, **bug) for bug in response['bugs']]
+            bug_ids.extend([bug.id for bug in bugs])
+
+    for bug_id in bug_ids:
         bugmon = BugMonitor(api_root, api_key, bug_id, args.repobase)
 
         log.info("====== Analyzing bug {0} ======".format(bug_id))
         try:
             if args.verify_fixed:
-                bugmon.verifyFixedBug(args.update_bug)
+                bugmon.verify(args.update_bug)
             elif args:
-                bugmon.confirmOpenBug(args.update_bug, args.update_bug_positive)
+                bugmon.confirm_open(args.update_bug, args.update_bug_positive)
             elif args.process:
-                bugmon.processCommand()
+                bugmon.process_whiteboard()
         except BugException as b:
             log.error("Cannot process bug: {0}".format(str(b)))
             log.error(traceback.format_exc())
