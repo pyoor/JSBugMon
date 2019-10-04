@@ -34,6 +34,40 @@ from test_binary import testBinary
 
 log = logging.getLogger("bugmon")
 
+ALLOWED_OPTS = [
+    '--fuzzing-safe',
+    '--ion-eager',
+    '--baseline-eager',
+    '--ion-regalloc=backtracking',
+    '--ion-regalloc=lsra',
+    '--thread-count=2',
+    '--cpu-count=2',
+    '--ion-parallel-compile=off',
+    '--ion-offthread-compile=off',
+    '--ion-check-range-analysis',
+    '--ion-gvn=pessimistic',
+    '--ion-gvn=off',
+    '--no-ion',
+    '--no-baseline',
+    '--arm-sim-icache-checks',
+    '--arm-asm-nop-fill=1',
+    '--no-threads',
+    '--unboxed-objects',
+    '--ion-fuzzer-checks',
+    '--ion-extra-checks',
+    '--arm-hwcap=vfp',
+    '--ion-shared-stubs=on',
+    '--ion-pgo=on',
+    '--nursery-strings=on',
+    '--nursery-strings=off',
+    '--enable-experimental-fields',
+    '--ion-warmup-threshold=0',
+    '--ion-warmup-threshold=1',
+    '--baseline-warmup-threshold=0',
+    '--baseline-warmup-threshold=1',
+    '-D'
+]
+
 
 def enum(*sequential, **named):
     enums = dict(list(zip(sequential, list(range(len(sequential))))), **named)
@@ -77,40 +111,6 @@ class BugMonitor:
 
         # Here we store the tip revision per repository for caching purposes
         self.tip_rev = {}
-
-        self.allowed_opts = [
-            '--fuzzing-safe',
-            '--ion-eager',
-            '--baseline-eager',
-            '--ion-regalloc=backtracking',
-            '--ion-regalloc=lsra',
-            '--thread-count=2',
-            '--cpu-count=2',
-            '--ion-parallel-compile=off',
-            '--ion-offthread-compile=off',
-            '--ion-check-range-analysis',
-            '--ion-gvn=pessimistic',
-            '--ion-gvn=off',
-            '--no-ion',
-            '--no-baseline',
-            '--arm-sim-icache-checks',
-            '--arm-asm-nop-fill=1',
-            '--no-threads',
-            '--unboxed-objects',
-            '--ion-fuzzer-checks',
-            '--ion-extra-checks',
-            '--arm-hwcap=vfp',
-            '--ion-shared-stubs=on',
-            '--ion-pgo=on',
-            '--nursery-strings=on',
-            '--nursery-strings=off',
-            '--enable-experimental-fields',
-            '--ion-warmup-threshold=0',
-            '--ion-warmup-threshold=1',
-            '--baseline-warmup-threshold=0',
-            '--baseline-warmup-threshold=1',
-            '-D'
-        ]
 
         milestone = os.path.join(repo_root, 'mozilla-central', 'config', 'milestone.txt')
         with open(milestone, 'r') as f:
@@ -659,7 +659,7 @@ class BugMonitor:
         viableOptsList = []
         opts = []
 
-        for opt in self.allowed_opts:
+        for opt in ALLOWED_OPTS:
             if text.find(opt) != -1:
                 opts.append(opt)
 
