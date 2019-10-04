@@ -117,7 +117,7 @@ class BugMonitor:
             last = f.readlines()[-1]
             self.centralVersion = int(last.split('.', 1)[0])
 
-        self.branches = ['mozilla-central', 'mozilla-aurora', 'mozilla-beta', 'mozilla-release']
+        self.branches = ['mozilla-central', 'mozilla-beta', 'mozilla-release']
 
     def verifyFixedBug(self, updateBug):
         bugModified = False
