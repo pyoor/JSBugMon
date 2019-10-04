@@ -119,171 +119,72 @@ class BugMonitor:
 
         self.branches = ['mozilla-central', 'mozilla-beta', 'mozilla-release']
 
-    def verifyFixedBug(self, updateBug):
-        bugModified = False
-        bugVerified = False
-        verifiedFlags = []
-        comments = []
+    def verify(self):
+        """
+        Attempt to verify the state of bugs
+
+        Bugs marked as resolved and fixed are verified to ensure that they are in fact, fixed
+        All other bugs will be tested to determine if the bug still reproduces
+
+        """
+        result = self.reproduceBug()
 
         if self.bug.status == "RESOLVED" and self.bug.resolution == "FIXED":
-            result = self.reproduceBug()
-
             if result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-                if updateBug:
-                    log.info("Marking bug {0} as verified fixed...".format(self.bug.id))
-                    # Mark VERIFIED FIXED now
-                    bugVerified = True
-                    bugModified = True
-
-                    # Add a comment
-                    comments.append("JSBugMon: This bug has been automatically verified fixed.")
-                else:
-                    log.debug("Would mark bug {0} as verified fixed...".format(self.bug.id))
-
-        for branchNum in range(self.centralVersion - 3, self.centralVersion):
-            statusFlagName = 'cf_status_firefox' + str(branchNum)
-            if getattr(self.bug, statusFlagName) == 'fixed':
-                branchRepo = self.branches[self.centralVersion - branchNum]
-                branchRepoRev = self.hgFindFixParent(os.path.join(self.repo_root, branchRepo))
-
-                if branchRepoRev is None:
-                    log.warning("Unable to find fix parent for bug {} on repository {}".format(self.bug.id, branchRepo))
-                    continue
-
-                result = self.reproduceBug(branchRepo, branchRepoRev)
-
-                if result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-                    if updateBug:
-                        log.info("Marking bug {0} as verified fixed on Fx{1} ...".format(self.bug.id, branchNum))
-                        verifiedFlags.append(statusFlagName)
-                        bugModified = True
-                        comments.append(
-                            "JSBugMon: This bug has been automatically verified fixed on Fx" + str(branchNum))
-                    else:
-                        log.debug("Would mark bug {0} as verified fixed on Fx{1} ...".format(self.bug.id, branchNum))
-
-        if bugModified:
-            while True:
-                for flag in verifiedFlags:
-                    setattr(self.bug, flag, 'verified')
-
-                if bugVerified:
+                log.info("Bug {0}: Verified as fixed on tip".format(self.bug.id))
+                if self.commands['update']:
                     self.bug.status = "VERIFIED"
-                    setattr(self.bug, 'cf_status_firefox' + str(self.centralVersion), 'verified')
+                    self.bug.add_comment("JSBugMon: This bug has been verified as fixed.")
+            elif result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
+                log.warn("Bug {0}: Resolved but still reproduces".format(self.bug.id))
+                self.bug.add_comment("JSBugMon: This bug is marked as FIXED however, the testcase still reproduces.")
 
-                try:
-                    if self.bug.diff():
-                        self.bugsy.put(self.bug)
-                        self.bug.update()
-                    break
-                except Exception as e:
-                    log.error("Caught exception: {0}".format(str(e)))
-                    log.error(traceback.format_exc())
-                    time.sleep(1)
-                except:
-                    log.warning("Failed to submit bug change, sleeping one second and retrying...")
-                    time.sleep(1)
+            # Only check branches if bug is marked as fixed
+            for rel_num in range(self.centralVersion - 2, self.centralVersion):
+                flag = 'cf_status_firefox{0}'.format(rel_num)
+                if getattr(self.bug, flag) == 'fixed':
+                    branch = self.branches[self.centralVersion - rel_num]
+                    rev = self.find_branch_commit(os.path.join(self.repo_root, branch))
+                    if rev is None:
+                        log.warning("Unable to find fix parent for bug {} on repository {}".format(self.bug.id, branch))
+                        continue
 
-        if len(comments) > 0:
-            comment = "\n".join(comments)
-            log.info("Commenting: ")
-            log.info(comment)
-            self.bug.add_comment(comment)
-        return
-
-    def confirmOpenBug(self, updateBug, updateBugPositive):
-        if self.bug.status != "RESOLVED" and self.bug.status != "VERIFIED":
-            bugUpdateRequested = False
-            bugConfirmRequested = False
-            bugCloseRequested = False
-            bugUpdated = False
-
-            closeBug = False
-
-            wbOpts = []
-            if self.bug.whiteboard:
-                ret = re.compile('\[jsbugmon:([^\]]+)\]').search(self.bug.whiteboard)
-                if ret:
-                    wbOpts = ret.group(1).split(",")
-
-            # Explicitly marked to ignore this bug
-            if 'ignore' in wbOpts:
-                return
-
-            if 'update' in wbOpts:
-                bugUpdateRequested = True
-
-            if 'reconfirm' in wbOpts:
-                bugConfirmRequested = True
-
-            if 'close' in wbOpts:
-                bugCloseRequested = True
-
-            result = self.reproduceBug()
-
-            comments = []
-
+                    result = self.reproduceBug(branch, rev)
+                    if result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
+                        log.info("Bug {0}: verified fixed on Fx{1}".format(self.bug.id, rel_num))
+                        setattr(self.bug, flag, 'verified')
+                        self.bug.add_comment("JSBugMon: This bug has been verified as fixed on Fx{0}".format(rel_num))
+        else:
             if result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
-                if updateBugPositive or bugConfirmRequested:
-                    log.info("Marking bug {0} as confirmed on tip...".format(self.bug.id))
-                    # Add a comment
-                    comments.append(
-                        "JSBugMon: This bug has been automatically confirmed to be still valid (reproduced on revision " + result.tipRev + ").")
-                    bugUpdated = True
-                else:
-                    log.debug("Would mark bug {0} as confirmed on tip...".format(self.bug.id))
+                log.info("Bug {0}: Verified as reproducible on tip...".format(self.bug.id))
+                self.bug.add_comment("JSBugMon: This bug remains reproducible on rev {}".format(result.tipRev))
             elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-                if updateBug or bugUpdateRequested:
-                    log.info("Marking bug {0} as non-reproducing on tip...".format(self.bug.id))
-                    # Add a comment
-                    comments.append(
-                        "JSBugMon: The testcase found in this bug no longer reproduces (tried revision " + result.tipRev + ").")
-                    bugUpdated = True
+                log.info("Bug {0}: Unable to reproduce on tip...".format(self.bug.id))
+                self.bug.add_comment("JSBugMon: This bug is no longer reproducible on rev".format(result.tipRev))
+                if self.commands['update']:
+                    self.bug.status = 'RESOLVED'
+                    self.bug.resolution = 'WORKSFORME'
 
-                    # Close bug only if requested to do so
-                    closeBug = bugCloseRequested
-                else:
-                    log.debug("Would mark bug {0} as non-reproducing on tip...".format(self.bug.id))
+        # Remove jsbugmon keyword to prevent further processing
+        if self.bug.status == 'RESOLVED' and 'jsbugmon' in self.bug.keywords:
+            self.bug.keywords.remove('jsbugmon')
 
-            if bugUpdated:
-                wb = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', r'\1,ignore', self.bug.whiteboard)
+        # Mark bug as verified
+        self.bug.whiteboard = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', r'\1,verified', self.bug.whiteboard)
 
-                while True:
-                    try:
-                        # We add "ignore" to our bugmon options so we don't update the bug a second time
-                        self.bug.whiteboard = wb
-
-                        # Mark bug as WORKSFORME if confirmed to no longer reproduce
-                        if closeBug:
-                            self.bug.status = "RESOLVED"
-                            self.bug.resolution = "WORKSFORME"
-
-                        self.bugsy.put(self.bug)
-                        self.bug.update()
-                        break
-                    except Exception as e:
-                        log.error(e)
-                        log.info("Failed to submit bug change, sleeping one second and retrying...")
-                        time.sleep(1)
-
-            if len(comments) > 0:
-                comment = "\n".join(comments)
-                log.info("Posting comment: ")
-                log.info(comment)
-                self.bug.add_comment(comment)
-
-        return
+        # If changes were made to the bug, push and update
+        if self.bug.diff():
+            self.bugsy.put(self.bug)
+            self.bug.update()
 
     def processCommand(self):
         bugUpdateRequested = False
         bugConfirmRequested = False
-        bugCloseRequested = False
         bugVerifyRequested = False
         bugBisectRequested = False
         bugBisectFixRequested = False
         bugBisectForceCompile = False
         bugFailureMsg = None
-        bugUpdated = False
 
         closeBug = False
         verifyBug = False
@@ -303,9 +204,6 @@ class BugMonitor:
 
             if 'reconfirm' in wbOpts:
                 bugConfirmRequested = True
-
-            if 'close' in wbOpts:
-                bugCloseRequested = True
 
             if 'verify' in wbOpts:
                 bugVerifyRequested = True
@@ -353,59 +251,8 @@ class BugMonitor:
                                 comments.append(
                                     "JSBugMon: Command failed during processing this bug: " + opt + " (branch " + branch + ")")
 
-            if bugVerifyRequested:
-                if self.bug.status == "RESOLVED":
-                    if result is None:
-                        result = self.reproduceBug()
-                    if result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP:
-                        log.info("Marking bug {0} as cannot verify fixed...".format(self.bug.id))
-                        # Add a comment
-                        comments.append(
-                            "JSBugMon: Cannot confirm fix, issue is still valid. (tried revision " + result.tipRev + ").")
-                    elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-                        log.info("Marking bug {0} as verified fixed...".format(self.bug.id))
-                        comments.append(
-                            "JSBugMon: This bug has been automatically verified fixed. (tried revision " + result.tipRev + ").")
-                        verifyBug = True
-                    else:
-                        log.info("Marking bug {0} as not processable ...".format(self.bug.id))
-                        comments.append("JSBugMon: Command failed during processing this bug: verify")
-
-            if bugUpdateRequested:
-                if self.bug.status != "RESOLVED" and self.bug.status != "VERIFIED":
-                    if result is None:
-                        try:
-                            result = self.reproduceBug()
-                        except BugException as b:
-                            bugFailureMsg = "JSBugMon: Cannot process bug: " + str(b)
-                        except InternalException:
-                            # Propagate internal failures, don't update the bug
-                            raise
-                        except Exception as e:
-                            bugFailureMsg = "JSBugMon: Cannot process bug: Unknown exception (check manually)"
-                            log.error("Caught exception: {0}".format(str(e)))
-                            log.error(traceback.format_exc())
-
-                    if result is not None:
-                        if (
-                            result.status == BugMonitorResult.statusCodes.REPRODUCED_TIP or result.status == BugMonitorResult.statusCodes.REPRODUCED_SWITCHED):
-                            bugReproduced = True
-                            if bugConfirmRequested:
-                                log.info("Marking bug {0} as confirmed on tip...".format(self.bug.id))
-                                # Add a comment
-                                comments.append(
-                                    "JSBugMon: This bug has been automatically confirmed to be still valid (reproduced on revision " + result.tipRev + ").")
-
-                        elif result.status == BugMonitorResult.statusCodes.REPRODUCED_FIXED:
-                            log.info("Marking bug {0} as non-reproducing on tip...".format(str(self.bug.id)))
-                            # Add a comment
-                            comments.append(
-                                "JSBugMon: The testcase found in this bug no longer reproduces (tried revision " + result.tipRev + ").")
-                            if bugCloseRequested:
-                                closeBug = True
-
-                        elif result.status == BugMonitorResult.statusCodes.FAILED:
-                            bugFailureMsg = "JSBugMon: Cannot process bug: Unable to automatically reproduce, please track manually."
+            if bugVerifyRequested or bugUpdateRequested or bugConfirmRequested:
+                self.verify()
 
             # If we already failed with the update command, don't try to bisect for now
             if bugFailureMsg is not None:
