@@ -111,6 +111,9 @@ class BugMonitor:
         self.repo_root = repo_root
         self.dry_run = dry_run
 
+        # Raise if target os doesn't match current platform.system()
+        self.os = self.identify_os()
+
         # Raise if testcase extraction fails
         self.working_dir = tempfile.TemporaryDirectory()
         self.testcase = self.extract_testcase()
@@ -119,7 +122,6 @@ class BugMonitor:
         self._runtime_opts = None
         self._build_flags = None
         self._arch = None
-        self._os = None
 
         build_config = BisectionConfig()
         self.build_manager = BuildManager(build_config)
@@ -180,27 +182,6 @@ class BugMonitor:
         return self._build_flags
 
     @property
-    def os(self):
-        """
-        Attempt to enumerate the original OS associated with the bug
-        """
-        if self._os is None:
-            op_sys = self.bug.op_sys
-            if op_sys is not None:
-                if 'Linux' in op_sys:
-                    self._os = 'Linux'
-                elif 'Windows' in op_sys:
-                    self._os = 'Windows'
-                elif 'Mac OS' in op_sys:
-                    self._os = 'Darwin'
-                else:
-                    self._os = platform.system()
-            else:
-                self._os = platform.system()
-
-        return self._os
-
-    @property
     def arch(self):
         """
         Attempt to enumerate the original architecture associated with the bug
@@ -232,6 +213,28 @@ class BugMonitor:
                         commands[command] = None
 
         return commands
+
+    def identify_os(self):
+        """
+        Attempt to enumerate the original OS associated with the bug
+        """
+        op_sys = self.bug.op_sys
+        if op_sys is not None:
+            if 'Linux' in op_sys:
+                os_ = 'Linux'
+            elif 'Windows' in op_sys:
+                os_ = 'Windows'
+            elif 'Mac OS' in op_sys:
+                os_ = 'Darwin'
+            else:
+                os_ = platform.system()
+
+            if os_ != platform.system():
+                raise BugException('Cannot process non-native bug (%s)' % os_)
+            else:
+                return os_
+        else:
+            return platform.system()
 
     def extract_testcase(self):
         """
