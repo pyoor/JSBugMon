@@ -36,6 +36,7 @@ from autobisect.config import BisectionConfig
 from autobisect.evaluator.js import JSEvaluator
 from bugsy import Bug, Bugsy
 from fuzzfetch import BuildFlags, Fetcher, FetcherException
+from fuzzfetch.fetch import Platform
 
 log = logging.getLogger("bugmon")
 
@@ -387,7 +388,8 @@ class BugMonitor:
             end = 'latest'
 
         evaluator = JSEvaluator(self.testcase, flags=' '.join(self.runtime_opts))
-        bisector = Bisector(evaluator, 'js', 'central', start, end, self.build_flags, find_fix)
+        platform_ = Platform(self.os, self.arch)
+        bisector = Bisector(evaluator, 'js', 'central', start, end, self.build_flags, platform_, find_fix)
         result = bisector.bisect()
 
         # Remove bisect command
@@ -446,12 +448,13 @@ class BugMonitor:
 
     def reproduce_bug(self, branch, rev=None):
         try:
+            platform_ = Platform(self.os, self.arch)
             if rev is not None:
-                build = Fetcher('js', branch, rev, self.build_flags, nearest=Fetcher.BUILD_ORDER_ASC)
+                build = Fetcher('js', branch, rev, self.build_flags, platform_, nearest=Fetcher.BUILD_ORDER_ASC)
             else:
-                build = Fetcher('js', branch, 'latest', self.build_flags, nearest=Fetcher.BUILD_ORDER_DESC)
+                build = Fetcher('js', branch, 'latest', self.build_flags, platform_, nearest=Fetcher.BUILD_ORDER_DESC)
         except FetcherException as e:
-            log.error(str(e))
+            log.error(e)
             return
 
         evaluator = JSEvaluator(self.testcase, flags=' '.join(self.runtime_opts))
