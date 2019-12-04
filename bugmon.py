@@ -17,14 +17,18 @@
 
 import argparse
 import base64
+import binascii
+import io
 import json
 import logging
 import os
 import platform
 import re
+import shutil
 import sys
 import tempfile
 import traceback
+import zipfile
 
 from autobisect.bisect import Bisector, BisectionResult
 from autobisect.build_manager import BuildManager
@@ -107,6 +111,7 @@ class BugMonitor:
         self.dry_run = dry_run
 
         # Raise if testcase extraction fails
+        self.working_dir = tempfile.TemporaryDirectory()
         self.testcase = self.extract_testcase()
 
         self._original_rev = None
@@ -234,13 +239,42 @@ class BugMonitor:
         """
         attachments = list(filter(lambda a: not a.is_obsolete, self.bug.get_attachments()))
         for attachment in sorted(attachments, key=lambda a: a.creation_time):
-            if attachment.file_name.endswith('.js'):
-                _, filename = tempfile.mkstemp(suffix='.js')
-                with open(filename, 'wb') as file:
-                    file.write(base64.decodebytes(attachment.data.encode('utf-8')))
-                return filename
+            self.clean_up()
+            try:
+                data = base64.decodebytes(attachment.data.encode('utf-8'))
+            except binascii.Error as e:
+                log.warn('Failed to decode attachment: ', e.message)
+                continue
 
-        raise BugException("Error: Failed to identify testcase")
+            if attachment.file_name.endswith('.js'):
+                filename = os.path.join(self.working_dir.name, attachment.file_name)
+                with open(filename, 'wb') as file:
+                    file.write(data)
+                    return filename
+            elif attachment.file_name.endswith('.zip'):
+                try:
+                    z = zipfile.ZipFile(io.BytesIO(data))
+                    z.extractall(self.working_dir.name)
+                except zipfile.BadZipFile as e:
+                    log.warn('Failed to decompress attachment: ', e)
+                    continue
+
+                testcases = list(filter(lambda f: f.endswith('.js'), os.listdir(self.working_dir.name)))
+                if len(testcases) != 1:
+                    log.warn('Failed to isolate testcase in zip!')
+                else:
+                    return os.path.join(self.working_dir.name, testcases[0])
+
+    def clean_up(self):
+        for file in os.listdir(self.working_dir.name):
+            file_path = os.path.join(self.working_dir.name, file)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                log.error('Failed to delete %s: %s', (file_path, e))
 
     def confirm_open(self, baseline):
         """
@@ -484,11 +518,11 @@ def main(argv=None):
             bug_ids.extend([bug.id for bug in bugs])
 
     for bug_id in bug_ids:
-        bugmon = BugMonitor(bugsy, bug_id, args.repobase, args.dry_run)
-
-        log.info("Begin analysis of bug {0} (Status: {1}, Resolution: {2})"
-                 .format(bug_id, bugmon.bug.status, bugmon.bug.resolution))
+        bugmon = None
         try:
+            bugmon = BugMonitor(bugsy, bug_id, args.repobase, args.dry_run)
+            log.info("Begin analysis of bug {0} (Status: {1}, Resolution: {2})"
+                     .format(bug_id, bugmon.bug.status, bugmon.bug.resolution))
             bugmon.process()
         except BugException as b:
             log.error("Cannot process bug: {0}".format(str(b)))
@@ -496,6 +530,9 @@ def main(argv=None):
         except Exception as e:
             log.error("Uncaught exception: {0}".format(str(e)))
             log.error(traceback.format_exc())
+        finally:
+            if bugmon is not None and bugmon.working_dir:
+                shutil.rmtree(bugmon.work, ignore_errors=True)
 
 
 if __name__ == '__main__':
