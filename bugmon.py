@@ -132,17 +132,17 @@ class BugMonitor:
     def original_rev(self):
         """
         Attempt to enumerate the original rev specified in comment 0 or jsbugmon origRev command
-        ToDo: Must resolve 12 char rev to full 40 char hash
         """
         if self._original_rev is None:
-            if 'origRev' in self.commands and re.match('^[a-f0-9]{12}[^a-f0-9]?', self.commands['origRev']):
+            if 'origRev' in self.commands and re.match('^([a-f0-9]{12}|[a-f0-9]{40})$', self.commands['origRev']):
                 self._original_rev = ['origRev']
             else:
                 comments = self.bug.get_comments()
                 tokens = comments[0].text.split(' ')
                 for token in tokens:
-                    if re.match('^[a-f0-9]{12}[^a-f0-9]?', token):
-                        self._original_rev = token[0:12]
+                    if re.match(r'^([a-f0-9]{12}|[a-f0-9]{40})$', token, re.IGNORECASE):
+                        self._original_rev = token
+                        break
                 else:
                     self._original_rev = None
 
