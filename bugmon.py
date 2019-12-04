@@ -155,7 +155,9 @@ class BugMonitor:
         """
         if self._runtime_opts is None:
             comments = self.bug.get_comments()
-            self._runtime_opts = list(filter(lambda flag: comments[0].text.find(flag), ALLOWED_OPTS))
+            if len(comments) >= 1:
+                comment = comments[0].text
+                self._runtime_opts = list(filter(lambda flag: flag in comment, ALLOWED_OPTS))
 
         return self._runtime_opts
 
