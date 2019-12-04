@@ -204,16 +204,13 @@ class BugMonitor:
         """
         Attempt to enumerate the original architecture associated with the bug
         """
-        # ToDo: This does nothing
-        #   This needs to be modified to check if the specified bug platform matches our local platform
-        #   If not, error out
-        # if self._arch is None:
-        #     if self.bug.platform == 'ARM':
-        #         return 'ARM64'
-        #     elif self.bug.platform == 'x86':
-        #         return 'i686'
-        #     elif self.bug.platform == 'x86_64':
-        #         return 'AMD64'
+        if self._arch is None:
+            if self.bug.platform == 'ARM':
+                return 'ARM64'
+            elif self.bug.platform == 'x86':
+                return 'i686'
+            elif self.bug.platform == 'x86_64':
+                return 'AMD64'
 
         return platform.machine()
 
