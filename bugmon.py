@@ -30,7 +30,7 @@ import tempfile
 import traceback
 import zipfile
 
-from autobisect.bisect import Bisector, BisectionResult
+from autobisect.bisect import BisectionResult, Bisector
 from autobisect.build_manager import BuildManager
 from autobisect.config import BisectionConfig
 from autobisect.evaluator.js import JSEvaluator
