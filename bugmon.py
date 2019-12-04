@@ -186,11 +186,11 @@ class BugMonitor:
         if self._os is None:
             op_sys = self.bug.op_sys
             if op_sys is not None:
-                if op_sys.find('Linux'):
+                if 'Linux' in op_sys:
                     self._os = 'Linux'
-                elif op_sys.find('Windows'):
+                elif 'Windows' in op_sys:
                     self._os = 'Windows'
-                elif op_sys.find('Mac OS'):
+                elif 'Mac OS' in op_sys:
                     self._os = 'Darwin'
                 else:
                     self._os = platform.system()
