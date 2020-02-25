@@ -188,11 +188,12 @@ class BugMonitor:
             comments = self.bug.get_comments()
             text = comments[0].text
             asan = 'AddressSanitizer: ' in text or '--enable-address-sanitizer' in text
+            tsan = 'ThreadSanitizer: ' in text or '--enable-thread-sanitizer' in text
             debug = '--enable-debug' in text
             fuzzing = '--enable-fuzzing' in text
             coverage = '--enable-coverage' in text
             valgrind = False  # Ignore valgrind for now
-            self._build_flags = BuildFlags(asan, debug, fuzzing, coverage, valgrind)
+            self._build_flags = BuildFlags(asan, tsan, debug, fuzzing, coverage, valgrind)
 
         return self._build_flags
 
