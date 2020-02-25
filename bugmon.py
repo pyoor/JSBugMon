@@ -278,46 +278,36 @@ class BugMonitor:
 
     def extract_testcase(self):
         """
-        Attempt to extract a testcase from the bug or raise an Exception
+        Extract all attachments and iterate over each until a working testcase is identified
         """
         attachments = list(filter(lambda a: not a.is_obsolete, self.bug.get_attachments()))
         for attachment in sorted(attachments, key=lambda a: a.creation_time):
-            self.clean_up()
             try:
                 data = base64.decodebytes(attachment.data.encode('utf-8'))
             except binascii.Error as e:
-                log.warn('Failed to decode attachment: ', e.message)
+                log.warning('Failed to decode attachment: ', e)
                 continue
 
-            if attachment.file_name.endswith('.js'):
-                filename = os.path.join(self.working_dir.name, attachment.file_name)
-                with open(filename, 'wb') as file:
-                    file.write(data)
-                    return filename
-            elif attachment.file_name.endswith('.zip'):
+            if attachment.file_name.endswith('.zip'):
                 try:
                     z = zipfile.ZipFile(io.BytesIO(data))
-                    z.extractall(self.working_dir.name)
                 except zipfile.BadZipFile as e:
-                    log.warn('Failed to decompress attachment: ', e)
+                    log.warning('Failed to decompress attachment: ', e)
                     continue
 
-                testcases = list(filter(lambda f: f.endswith('.js'), os.listdir(self.working_dir.name)))
-                if len(testcases) != 1:
-                    log.warn('Failed to isolate testcase in zip!')
-                else:
-                    return os.path.join(self.working_dir.name, testcases[0])
+                for filename in z.namelist():
+                    if os.path.exists(filename):
+                        log.warning('Duplicate filename identified: ', filename)
+                    z.extract(filename, self.working_dir.name)
+            else:
+                with open(os.path.join(self.working_dir.name, attachment.file_name), 'wb') as file:
+                    file.write(data)
 
-    def clean_up(self):
-        for file in os.listdir(self.working_dir.name):
-            file_path = os.path.join(self.working_dir.name, file)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                log.error('Failed to delete %s: %s', (file_path, e))
+        for filename in os.listdir(self.working_dir.name):
+            if filename.lower().startswith('testcase'):
+                return os.path.join(self.working_dir.name, filename)
+
+        raise BugException('Failed to identify testcase!')
 
     def confirm_open(self, baseline):
         """
