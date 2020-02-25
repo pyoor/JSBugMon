@@ -364,10 +364,7 @@ class BugMonitor:
         if 'confirm' in self.commands:
             self.remove_command('confirm')
 
-            # If changes were made to the bug, push and update
-            if self.bug.diff():
-                self.bugsy.put(self.bug)
-                self.bug.update()
+        self.report(comments)
 
     def verify_fixed(self, baseline):
         """
@@ -406,13 +403,7 @@ class BugMonitor:
                     # Mark branch as verified
                     setattr(self.bug, flag, 'verified')
 
-        if not self.dry_run:
-            map(lambda c: self.bug.add_comment(c), comments)
-
-            # If changes were made to the bug, push and update
-            if self.bug.diff():
-                self.bugsy.put(self.bug)
-                self.bug.update()
+        self.report(comments)
 
     def bisect(self, find_fix):
         """
@@ -481,13 +472,7 @@ class BugMonitor:
         if 'bisect' in self.commands:
             find_fix = baseline.status == ReproductionResult.PASSED
             result = self.bisect(find_fix)
-            if not self.dry_run:
-                self.bug.add_comment(result)
-
-                # If changes were made to the bug, push and update
-                if self.bug.diff():
-                    self.bugsy.put(self.bug)
-                    self.bug.update()
+            self.report([result])
 
     def reproduce_bug(self, branch, rev=None):
         try:
@@ -509,6 +494,27 @@ class BugMonitor:
                 return ReproductionResult(build, ReproductionResult.PASSED)
             else:
                 return ReproductionResult(build, ReproductionResult.FAILED)
+
+    def report(self, messages):
+        """
+        Push changes or if dry_run, report to log
+        :param messages: List of comments
+        :return:
+        """
+        diff = self.bug.diff()
+        if not self.dry_run:
+            for message in messages:
+                self.bug.add_comment(message)
+
+            # If changes were made to the bug, push and update
+            if diff:
+                self.bugsy.put(self.bug)
+                self.bug.update()
+        else:
+            for message in messages:
+                for line in message.splitlines():
+                    log.info(f"Comment: {line}")
+            log.info(f"Changes: {json.dumps(diff)}")
 
 
 def parse_args(argv=None):
