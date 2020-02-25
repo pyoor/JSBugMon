@@ -108,17 +108,15 @@ class ReproductionResult(object):
 
 
 class BugMonitor:
-    def __init__(self, bugsy, bug_num, repo_root, dry_run=False):
+    def __init__(self, bugsy, bug_num, dry_run=False):
         """
 
         :param bugsy: Bugsy instance used for retrieving bugs
         :param bug_num: Bug number to analyze
-        :param repo_root: Path to mozilla-unified repo
         :param dry_run: Boolean indicating if changes should be made to the bug
         """
         self.bugsy = bugsy
         self.bug = self.bugsy.get(bug_num, '_default')
-        self.repo_root = repo_root
         self.dry_run = dry_run
 
         # Raise if target os doesn't match current platform.system()
@@ -501,9 +499,6 @@ def parse_args(argv=None):
     # Optional args
     parser.add_argument('-d', '--dry-run', action='store_true', help="If enabled, don't make any remote changes")
 
-    # Required args
-    parser.add_argument('-r', '--repobase', default=None, required=True, help='Repository base directory.')
-
     # Bug selection
     bug_list = parser.add_mutually_exclusive_group(required=True)
     bug_list.add_argument('--bugs', nargs='+', help='Space separated list of bug numbers')
@@ -512,8 +507,6 @@ def parse_args(argv=None):
 
     if args.search_params and not os.path.isfile(args.search_params):
         raise parser.error('Search parameter path does not exist!')
-    if not os.path.isdir(args.repobase):
-        raise parser.error('Repobase path does not exist!')
 
     return args
 
@@ -549,9 +542,8 @@ def main(argv=None):
     for bug_id in bug_ids:
         bugmon = None
         try:
-            bugmon = BugMonitor(bugsy, bug_id, args.repobase, args.dry_run)
-            log.info("Begin analysis of bug {0} (Status: {1}, Resolution: {2})"
-                     .format(bug_id, bugmon.bug.status, bugmon.bug.resolution))
+            bugmon = BugMonitor(bugsy, bug_id, args.dry_run)
+            log.info(f"Analyzing bug {bug_id} (Status: {bugmon.bug.status}, Resolution: {bugmon.bug.resolution})")
             bugmon.process()
         # except BugException as b:
         #     log.error(f"Cannot process bug: {b}")
