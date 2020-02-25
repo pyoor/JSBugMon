@@ -229,6 +229,31 @@ class BugMonitor:
 
         return commands
 
+    @commands.setter
+    def commands(self, value):
+        parts = [f"{k}={v}" if v is not None else k for k, v in value.items()]
+        self.bug.whiteboard = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', ','.join(parts), self.bug.whiteboard)
+
+    def add_command(self, key, value=None):
+        """
+        Add a JSBugmon command to the whiteboard
+        :return:
+        """
+        commands = self.commands
+        commands[key] = value
+        self.commands = commands
+
+    def remove_command(self, key):
+        """
+        Remove a JSBugmon command to the whiteboard
+        :return:
+        """
+        commands = self.commands
+        if key in commands:
+            del commands[key]
+
+        self.commands = commands
+
     def identify_os(self):
         """
         Attempt to enumerate the original OS associated with the bug
@@ -308,7 +333,7 @@ class BugMonitor:
             if self.bug.status == 'NEW' and 'confirmed' not in self.commands:
                 comments.append(f"JSBugMon: Verified bug as reproducible on {baseline.build.changeset}")
                 # Mark bug as confirmed
-                self.bug.whiteboard = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', r'\1,confirmed', self.bug.whiteboard)
+                self.add_command('confirmed')
                 comments.append(self.bisect(find_fix=False))
             # ToDo: Add check to see if last activity is > 30 days
             elif self.dry_run:
@@ -333,13 +358,7 @@ class BugMonitor:
 
         # Remove the confirm command
         if 'confirm' in self.commands:
-            match = re.search(r'(?<=jsbugmon:)(.[^\]]*)', self.bug.whiteboard)
-            if match is not None:
-                replacement = match.group(0).replace('confirm', '')
-                self.bug.whiteboard = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', replacement, self.bug.whiteboard)
-
-        if not self.dry_run:
-            map(lambda c: self.bug.add_comment(c), comments)
+            self.remove_command('confirm')
 
             # If changes were made to the bug, push and update
             if self.bug.diff():
@@ -412,10 +431,7 @@ class BugMonitor:
 
         # Remove bisect command
         if 'bisect' in self.commands:
-            match = re.search(r'(?<=jsbugmon:)(.[^\]]*)', self.bug.whiteboard)
-            if match is not None:
-                replacement = match.group(0).replace('bisect', '')
-                self.bug.whiteboard = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', replacement, self.bug.whiteboard)
+            self.remove_command('bisect')
 
         if result.status != BisectionResult.SUCCESS:
             log.warning(f'Failed to bisect testcase')
