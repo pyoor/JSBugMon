@@ -320,7 +320,7 @@ class BugMonitor:
         comments = []
         if baseline.status == ReproductionResult.CRASHED:
             log.info(f"Verified as reproducible on {baseline.build.changeset}...")
-            if self.bug.status == 'NEW' and 'confirmed' not in self.commands:
+            if 'confirmed' not in self.commands:
                 comments.append(f"JSBugMon: Verified bug as reproducible on {baseline.build.changeset}")
                 # Mark bug as confirmed
                 self.add_command('confirmed')
