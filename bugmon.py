@@ -33,7 +33,7 @@ import requests
 from autobisect.bisect import BisectionResult, Bisector
 from autobisect.build_manager import BuildManager
 from autobisect.config import BisectionConfig
-from autobisect.evaluator.js import JSEvaluator
+from autobisect.evaluator import BrowserEvaluator, JSEvaluator
 from bugsy import Bug, Bugsy
 from fuzzfetch import BuildFlags, Fetcher, FetcherException
 from fuzzfetch.fetch import Platform
@@ -127,8 +127,20 @@ class BugMonitor:
         self.working_dir = tempfile.TemporaryDirectory()
         self.testcase = self.extract_testcase()
 
+        # Determine what type of bug we're evaluating
+        if self.bug.component.startswith('Javascript Engine'):
+            self.target = 'js'
+            self.evaluator = JSEvaluator(self.testcase, flags=self.runtime_opts)
+        else:
+            self.target = 'firefox'
+            prefs_path = None
+            for filename in os.listdir(self.working_dir.name):
+                with open(os.path.join(self.working_dir.name, filename)) as f:
+                    if filename.endswith('.js') and 'user_pref' in f.read():
+                        prefs_path = os.path.join(self.working_dir.name, filename)
+            self.evaluator = BrowserEvaluator(self.testcase, prefs=prefs_path)
+
         self._original_rev = None
-        self._runtime_opts = None
         self._build_flags = None
         self._arch = None
 
@@ -413,9 +425,8 @@ class BugMonitor:
             start = self.original_rev
             end = 'latest'
 
-        evaluator = JSEvaluator(self.testcase, flags=' '.join(self.runtime_opts))
         platform_ = Platform(self.os, self.arch)
-        bisector = Bisector(evaluator, 'js', 'central', start, end, self.build_flags, platform_, find_fix)
+        bisector = Bisector(self.evaluator, self.target, 'central', start, end, self.build_flags, platform_, find_fix)
         result = bisector.bisect()
 
         # Remove bisect command
@@ -479,16 +490,16 @@ class BugMonitor:
         try:
             platform_ = Platform(self.os, self.arch)
             if rev is not None:
-                build = Fetcher('js', branch, rev, self.build_flags, platform_, nearest=Fetcher.BUILD_ORDER_ASC)
+                build = Fetcher(self.target, branch, rev, self.build_flags, platform_, nearest=Fetcher.BUILD_ORDER_ASC)
             else:
-                build = Fetcher('js', branch, 'latest', self.build_flags, platform_, nearest=Fetcher.BUILD_ORDER_DESC)
+                build = Fetcher(self.target, branch, 'latest', self.build_flags, platform_,
+                                nearest=Fetcher.BUILD_ORDER_DESC)
         except FetcherException as e:
             log.error(e)
             return
 
-        evaluator = JSEvaluator(self.testcase, flags=' '.join(self.runtime_opts))
         with self.build_manager.get_build(build) as build_path:
-            status = evaluator.evaluate_testcase(build_path)
+            status = self.evaluator.evaluate_testcase(build_path)
             if status == Bisector.BUILD_CRASHED:
                 return ReproductionResult(build, ReproductionResult.CRASHED)
             elif status == Bisector.BUILD_PASSED:
