@@ -582,7 +582,7 @@ def main(argv=None):
         #     log.error(traceback.format_exc())
         finally:
             if bugmon is not None and bugmon.working_dir:
-                shutil.rmtree(bugmon.work, ignore_errors=True)
+                shutil.rmtree(bugmon.working_dir, ignore_errors=True)
 
 
 if __name__ == '__main__':
