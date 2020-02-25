@@ -574,12 +574,6 @@ def main(argv=None):
             bugmon = BugMonitor(bugsy, bug_id, args.dry_run)
             log.info(f"Analyzing bug {bug_id} (Status: {bugmon.bug.status}, Resolution: {bugmon.bug.resolution})")
             bugmon.process()
-        # except BugException as b:
-        #     log.error(f"Cannot process bug: {b}")
-        #     log.error(traceback.format_exc())
-        # except Exception as e:
-        #     log.error(f"Uncaught exception: {e}")
-        #     log.error(traceback.format_exc())
         finally:
             if bugmon is not None and bugmon.working_dir:
                 shutil.rmtree(bugmon.working_dir.name, ignore_errors=True)
