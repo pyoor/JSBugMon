@@ -420,7 +420,10 @@ class BugMonitor:
 
         if result.status != BisectionResult.SUCCESS:
             log.warning(f'Failed to bisect testcase')
-            return f'JSBugmon: Failed to bisect testcase ({result.message}).'
+            output = [f'JSBugmon: Failed to bisect testcase ({result.message}).',
+                      f'> Start: {result.start.changeset} ({result.start.build_id})',
+                      f'> End: {result.end.changeset} ({result.end.build_id})']
+            return "\n".join(output)
 
         output = [f'> Start: {result.start.changeset} ({result.start.build_id})',
                   f'> End: {result.end.changeset} ({result.end.build_id})'
