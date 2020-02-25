@@ -156,7 +156,7 @@ class BugMonitor:
     @property
     def original_rev(self):
         """
-        Attempt to enumerate the original rev specified in comment 0 or jsbugmon origRev command
+        Attempt to enumerate the original rev specified in comment 0 or bugmon origRev command
         """
         if self._original_rev is None:
             if 'origRev' in self.commands and re.match('^([a-f0-9]{12}|[a-f0-9]{40})$', self.commands['origRev']):
@@ -230,7 +230,7 @@ class BugMonitor:
         """
         commands = {}
         if self.bug.whiteboard:
-            match = re.search(r'(?<=\[jsbugmon:).[^\]]*', self.bug.whiteboard)
+            match = re.search(r'(?<=\[bugmon:).[^\]]*', self.bug.whiteboard)
             if match is not None:
                 for command in match.group(0).split(','):
                     if '=' in command:
@@ -244,11 +244,11 @@ class BugMonitor:
     @commands.setter
     def commands(self, value):
         parts = [f"{k}={v}" if v is not None else k for k, v in value.items()]
-        self.bug.whiteboard = re.sub(r'(?<=jsbugmon:)(.[^\]]*)', ','.join(parts), self.bug.whiteboard)
+        self.bug.whiteboard = re.sub(r'(?<=bugmon:)(.[^\]]*)', ','.join(parts), self.bug.whiteboard)
 
     def add_command(self, key, value=None):
         """
-        Add a JSBugmon command to the whiteboard
+        Add a bugmon command to the whiteboard
         :return:
         """
         commands = self.commands
@@ -257,7 +257,7 @@ class BugMonitor:
 
     def remove_command(self, key):
         """
-        Remove a JSBugmon command to the whiteboard
+        Remove a bugmon command to the whiteboard
         :return:
         """
         commands = self.commands
@@ -333,21 +333,21 @@ class BugMonitor:
         if baseline.status == ReproductionResult.CRASHED:
             log.info(f"Verified as reproducible on {baseline.build.changeset}...")
             if 'confirmed' not in self.commands:
-                comments.append(f"JSBugMon: Verified bug as reproducible on {baseline.build.changeset}")
+                comments.append(f"BugMon: Verified bug as reproducible on {baseline.build.changeset}")
                 # Mark bug as confirmed
                 self.add_command('confirmed')
                 comments.append(self.bisect(find_fix=False))
             else:
                 last_change = datetime.strptime('2019-05-16T18:05:38Z', '%Y-%m-%dT%H:%M:%SZ')
                 if datetime.now() - timedelta(days=30) > last_change:
-                    comments.append(f"JSBugMon: Bug remains reproducible on {baseline.build.changeset}")
+                    comments.append(f"BugMon: Bug remains reproducible on {baseline.build.changeset}")
         elif baseline.status == ReproductionResult.PASSED:
             # ToDo: Don't comment if we haven't confirmed the bug as open before
             log.info(f"Unable to reproduce bug on {baseline.build.changeset}...")
-            comments.append(f"JSBugMon:Unable to reproduce bug on rev {baseline.build.changeset}")
+            comments.append(f"BugMon:Unable to reproduce bug on rev {baseline.build.changeset}")
 
-            if 'jsbugmon' in self.bug.keywords:
-                self.bug.keywords.remove('jsbugmon')
+            if 'bugmon' in self.bug.keywords:
+                self.bug.keywords.remove('bugmon')
 
             if 'close' in self.commands:
                 self.bug.status = 'RESOLVED'
@@ -379,16 +379,16 @@ class BugMonitor:
         comments = []
         if baseline.status == ReproductionResult.PASSED:
             log.info(f"Verified as fixed on rev {test_rev}")
-            comments.append(f"JSBugMon: Verified bug as fixed on rev {test_rev}")
+            comments.append(f"BugMon: Verified bug as fixed on rev {test_rev}")
 
-            if 'jsbugmon' in self.bug.keywords:
-                self.bug.keywords.remove('jsbugmon')
+            if 'bugmon' in self.bug.keywords:
+                self.bug.keywords.remove('bugmon')
 
             if 'close' in self.commands:
                 self.bug.status = "VERIFIED"
         elif baseline.status == ReproductionResult.CRASHED:
             log.info(f"Bug is marked as resolved but still reproduces on rev {test_rev}")
-            comments.append(f"JSBugMon: Bug is marked as FIXED but it still reproduces on rev {test_rev}")
+            comments.append(f"BugMon: Bug is marked as FIXED but it still reproduces on rev {test_rev}")
 
         # Only check branches if bug is marked as fixed
         for rel_num in range(self.central_version - 2, self.central_version):
@@ -398,7 +398,7 @@ class BugMonitor:
                 baseline = self.reproduce_bug(branch)
                 if baseline.status == ReproductionResult.PASSED:
                     log.info(f"Verified fixed on Fx{rel_num}")
-                    comments.append(f"JSBugMon: Verified bug as fixed on Fx{rel_num}")
+                    comments.append(f"BugMon: Verified bug as fixed on Fx{rel_num}")
 
                     # Mark branch as verified
                     setattr(self.bug, flag, 'verified')
@@ -434,7 +434,7 @@ class BugMonitor:
 
         if result.status != BisectionResult.SUCCESS:
             log.warning(f'Failed to bisect testcase')
-            output = [f'JSBugmon: Failed to bisect testcase ({result.message}).',
+            output = [f'Bugmon: Failed to bisect testcase ({result.message}).',
                       f'> Start: {result.start.changeset} ({result.start.build_id})',
                       f'> End: {result.end.changeset} ({result.end.build_id})']
             return "\n".join(output)
@@ -448,7 +448,7 @@ class BugMonitor:
             log.info(text)
 
         range_string = "\n".join(output)
-        return f'JSBugmon: Reduced build range to...\n{range_string}'
+        return f'Bugmon: Reduced build range to...\n{range_string}'
 
     def process(self):
         """
