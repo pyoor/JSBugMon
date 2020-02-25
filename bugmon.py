@@ -342,8 +342,9 @@ class BugMonitor:
                 if datetime.now() - timedelta(days=30) > last_change:
                     comments.append(f"JSBugMon: Bug remains reproducible on {baseline.build.changeset}")
         elif baseline.status == ReproductionResult.PASSED:
+            # ToDo: Don't comment if we haven't confirmed the bug as open before
             log.info(f"Unable to reproduce bug on {baseline.build.changeset}...")
-            comments.append(f"JSBugMon: This bug no longer reproduces on rev {baseline.build.changeset}")
+            comments.append(f"JSBugMon:Unable to reproduce bug on rev {baseline.build.changeset}")
 
             if 'jsbugmon' in self.bug.keywords:
                 self.bug.keywords.remove('jsbugmon')
