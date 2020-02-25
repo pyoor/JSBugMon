@@ -172,13 +172,12 @@ class BugMonitor:
         """
         Attempt to enumerate the runtime flags specified in comment 0
         """
-        if self._runtime_opts is None:
-            comments = self.bug.get_comments()
-            if len(comments) >= 1:
-                comment = comments[0].text
-                self._runtime_opts = list(filter(lambda flag: flag in comment, ALLOWED_OPTS))
+        comments = self.bug.get_comments()
+        if len(comments) >= 1:
+            comment = comments[0].text
+            return list(filter(lambda flag: flag in comment, ALLOWED_OPTS))
 
-        return self._runtime_opts
+        return []
 
     @property
     def build_flags(self):
