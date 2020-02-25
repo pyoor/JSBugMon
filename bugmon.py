@@ -440,7 +440,7 @@ class BugMonitor:
             return "\n".join(output)
 
         output = [f'> Start: {result.start.changeset} ({result.start.build_id})',
-                  f'> End: {result.end.changeset} ({result.end.build_id})'
+                  f'> End: {result.end.changeset} ({result.end.build_id})',
                   f'> Pushlog: {result.pushlog}']
 
         log.info(f'Reduced build range to...')
