@@ -27,7 +27,6 @@ import re
 import shutil
 import sys
 import tempfile
-import traceback
 import zipfile
 
 import requests
@@ -548,12 +547,12 @@ def main(argv=None):
             log.info("Begin analysis of bug {0} (Status: {1}, Resolution: {2})"
                      .format(bug_id, bugmon.bug.status, bugmon.bug.resolution))
             bugmon.process()
-        except BugException as b:
-            log.error("Cannot process bug: {0}".format(str(b)))
-            log.error(traceback.format_exc())
-        except Exception as e:
-            log.error("Uncaught exception: {0}".format(str(e)))
-            log.error(traceback.format_exc())
+        # except BugException as b:
+        #     log.error(f"Cannot process bug: {b}")
+        #     log.error(traceback.format_exc())
+        # except Exception as e:
+        #     log.error(f"Uncaught exception: {e}")
+        #     log.error(traceback.format_exc())
         finally:
             if bugmon is not None and bugmon.working_dir:
                 shutil.rmtree(bugmon.work, ignore_errors=True)
