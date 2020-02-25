@@ -24,7 +24,6 @@ import logging
 import os
 import platform
 import re
-import shutil
 import sys
 import tempfile
 import zipfile
@@ -110,11 +109,12 @@ class ReproductionResult(object):
 
 
 class BugMonitor:
-    def __init__(self, bugsy, bug_num, dry_run=False):
+    def __init__(self, bugsy, bug_num, working_dir, dry_run=False):
         """
 
         :param bugsy: Bugsy instance used for retrieving bugs
         :param bug_num: Bug number to analyze
+        :param working_dir: Path to working directory
         :param dry_run: Boolean indicating if changes should be made to the bug
         """
         self.bugsy = bugsy
@@ -125,7 +125,7 @@ class BugMonitor:
         self.os = self.identify_os()
 
         # Raise if testcase extraction fails
-        self.working_dir = tempfile.TemporaryDirectory()
+        self.working_dir = working_dir
         self.testcase = self.extract_testcase()
 
         # Determine what type of bug we're evaluating
@@ -135,10 +135,10 @@ class BugMonitor:
         else:
             self.target = 'firefox'
             prefs_path = None
-            for filename in os.listdir(self.working_dir.name):
-                with open(os.path.join(self.working_dir.name, filename)) as f:
+            for filename in os.listdir(self.working_dir):
+                with open(os.path.join(self.working_dir, filename)) as f:
                     if filename.endswith('.js') and 'user_pref' in f.read():
-                        prefs_path = os.path.join(self.working_dir.name, filename)
+                        prefs_path = os.path.join(self.working_dir, filename)
             self.evaluator = BrowserEvaluator(self.testcase, prefs=prefs_path)
 
         self._original_rev = None
@@ -310,14 +310,14 @@ class BugMonitor:
                 for filename in z.namelist():
                     if os.path.exists(filename):
                         log.warning('Duplicate filename identified: ', filename)
-                    z.extract(filename, self.working_dir.name)
+                    z.extract(filename, self.working_dir)
             else:
-                with open(os.path.join(self.working_dir.name, attachment.file_name), 'wb') as file:
+                with open(os.path.join(self.working_dir, attachment.file_name), 'wb') as file:
                     file.write(data)
 
-        for filename in os.listdir(self.working_dir.name):
+        for filename in os.listdir(self.working_dir):
             if filename.lower().startswith('testcase'):
-                return os.path.join(self.working_dir.name, filename)
+                return os.path.join(self.working_dir, filename)
 
         raise BugException('Failed to identify testcase!')
 
@@ -569,14 +569,10 @@ def main(argv=None):
             bug_ids.extend([bug.id for bug in bugs])
 
     for bug_id in bug_ids:
-        bugmon = None
-        try:
-            bugmon = BugMonitor(bugsy, bug_id, args.dry_run)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bugmon = BugMonitor(bugsy, bug_id, temp_dir, args.dry_run)
             log.info(f"Analyzing bug {bug_id} (Status: {bugmon.bug.status}, Resolution: {bugmon.bug.resolution})")
             bugmon.process()
-        finally:
-            if bugmon is not None and bugmon.working_dir:
-                shutil.rmtree(bugmon.working_dir.name, ignore_errors=True)
 
 
 if __name__ == '__main__':
