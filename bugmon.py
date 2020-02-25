@@ -488,8 +488,8 @@ class BugMonitor:
                 build = Fetcher(self.target, branch, 'latest', self.build_flags, platform_,
                                 nearest=Fetcher.BUILD_ORDER_DESC)
         except FetcherException as e:
-            log.error(e)
-            return
+            log.error(f"Error fetching build: {e}")
+            return ReproductionResult(ReproductionResult.NO_BUILD)
 
         with self.build_manager.get_build(build) as build_path:
             status = self.evaluator.evaluate_testcase(build_path)
