@@ -402,6 +402,11 @@ class BugMonitor:
 
                     # Mark branch as verified
                     setattr(self.bug, flag, 'verified')
+                elif baseline.status == ReproductionResult.CRASHED:
+                    log.info(f"Bug remains vulnerable on Fx{rel_num}")
+                    # Mark branch as affected
+                    if getattr(self.bug, flag) != 'affected':
+                        setattr(self.bug, flag, 'affected')
 
         self.report(comments)
 
