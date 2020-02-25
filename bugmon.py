@@ -101,10 +101,11 @@ class ReproductionResult(object):
     PASSED = 0
     CRASHED = 1
     FAILED = 2
+    NO_BUILD = 3
 
-    def __init__(self, build, status):
-        self.build = build
+    def __init__(self, status, build=None):
         self.status = status
+        self.build = build
 
 
 class BugMonitor:
@@ -448,6 +449,9 @@ class BugMonitor:
         bisect - Attempt to bisect the bug regression or, if RESOLVED, the bug fix
         """
         baseline = self.reproduce_bug('central')
+        if baseline.status == ReproductionResult.NO_BUILD:
+            log.warning(f'Could not find matching build to verify status')
+            return
         if baseline.status == ReproductionResult.FAILED:
             log.warning(f'Unable to verify status due to bad build')
             return
