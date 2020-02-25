@@ -494,11 +494,11 @@ class BugMonitor:
         with self.build_manager.get_build(build) as build_path:
             status = self.evaluator.evaluate_testcase(build_path)
             if status == Bisector.BUILD_CRASHED:
-                return ReproductionResult(build, ReproductionResult.CRASHED)
+                return ReproductionResult(ReproductionResult.CRASHED, build)
             elif status == Bisector.BUILD_PASSED:
-                return ReproductionResult(build, ReproductionResult.PASSED)
+                return ReproductionResult(ReproductionResult.PASSED, build)
             else:
-                return ReproductionResult(build, ReproductionResult.FAILED)
+                return ReproductionResult(ReproductionResult.FAILED, build)
 
     def report(self, messages):
         """
