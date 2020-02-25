@@ -28,6 +28,7 @@ import shutil
 import sys
 import tempfile
 import zipfile
+from datetime import datetime, timedelta
 
 import requests
 from autobisect.bisect import BisectionResult, Bisector
@@ -336,9 +337,10 @@ class BugMonitor:
                 # Mark bug as confirmed
                 self.add_command('confirmed')
                 comments.append(self.bisect(find_fix=False))
-            # ToDo: Add check to see if last activity is > 30 days
-            elif self.dry_run:
-                comments.append(f"JSBugMon: Bug remains reproducible on {baseline.build.changeset}")
+            else:
+                last_change = datetime.strptime('2019-05-16T18:05:38Z', '%Y-%m-%dT%H:%M:%SZ')
+                if datetime.now() - timedelta(days=30) > last_change:
+                    comments.append(f"JSBugMon: Bug remains reproducible on {baseline.build.changeset}")
         elif baseline.status == ReproductionResult.PASSED:
             log.info(f"Unable to reproduce bug on {baseline.build.changeset}...")
             comments.append(f"JSBugMon: This bug no longer reproduces on rev {baseline.build.changeset}")
