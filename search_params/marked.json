@@ -3,6 +3,6 @@
   "query_format": "advanced",
   "field0-0-0": "status_whiteboard",
   "type0-0-0": "substring",
-  "value0-0-0": "[jsbugmon:",
+  "value0-0-0": "[bugmon:",
   "include_fields": "id"
 }
