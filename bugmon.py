@@ -30,6 +30,7 @@ import tempfile
 import traceback
 import zipfile
 
+import requests
 from autobisect.bisect import BisectionResult, Bisector
 from autobisect.build_manager import BuildManager
 from autobisect.config import BisectionConfig
@@ -76,6 +77,16 @@ ALLOWED_OPTS = [
 ]
 
 AVAILABLE_BRANCHES = ['mozilla-central', 'mozilla-beta', 'mozilla-release']
+HTTP_SESSION = requests.Session()
+
+
+def _get_url(url):
+    """
+    Retrieve requested URL
+    """
+    data = HTTP_SESSION.get(url, stream=True)
+    data.raise_for_status()
+    return data
 
 
 def enum(*sequential, **named):
@@ -126,10 +137,10 @@ class BugMonitor:
         build_config = BisectionConfig()
         self.build_manager = BuildManager(build_config)
 
-        milestone = os.path.join(repo_root, 'mozilla-central', 'config', 'milestone.txt')
-        with open(milestone, 'r') as f:
-            last = f.readlines()[-1]
-            self.centralVersion = int(last.split('.', 1)[0])
+        # Identify current mozilla-central release
+        milestone = _get_url('https://hg.mozilla.org/mozilla-central/raw-file/tip/config/milestone.txt')
+        version = milestone.text.splitlines()[-1]
+        self.central_version = int(version.split('.', 1)[0])
 
     @property
     def original_rev(self):
@@ -356,10 +367,10 @@ class BugMonitor:
             comments.append(f"JSBugMon: Bug is marked as FIXED but it still reproduces on rev {test_rev}")
 
         # Only check branches if bug is marked as fixed
-        for rel_num in range(self.centralVersion - 2, self.centralVersion):
-            flag = 'cf_status_firefox{0}'.format(rel_num)
+        for rel_num in range(self.central_version - 2, self.central_version):
+            flag = f'cf_status_firefox{rel_num}'
             if getattr(self.bug, flag) == 'fixed':
-                branch = AVAILABLE_BRANCHES[self.centralVersion - rel_num]
+                branch = AVAILABLE_BRANCHES[self.central_version - rel_num]
                 baseline = self.reproduce_bug(branch)
                 if baseline.status == ReproductionResult.PASSED:
                     log.info(f"Verified fixed on Fx{rel_num}")
