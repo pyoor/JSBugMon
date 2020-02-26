@@ -285,9 +285,9 @@ class BugMonitor:
         else:
             return platform.system()
 
-    def extract_testcase(self):
+    def fetch_attachments(self):
         """
-        Extract all attachments and iterate over each until a working testcase is identified
+        Download all attachments and store them in self.working_dir
         """
         attachments = list(filter(lambda a: not a.is_obsolete, self.bug.get_attachments()))
         for attachment in sorted(attachments, key=lambda a: a.creation_time):
@@ -312,6 +312,10 @@ class BugMonitor:
                 with open(os.path.join(self.working_dir, attachment.file_name), 'wb') as file:
                     file.write(data)
 
+    def identify_testcase(self):
+        """
+        Identify testcase in working_dir
+        """
         for filename in os.listdir(self.working_dir):
             if filename.lower().startswith('testcase'):
                 return os.path.join(self.working_dir, filename)
