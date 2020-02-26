@@ -322,6 +322,26 @@ class BugMonitor:
 
         raise BugException('Failed to identify testcase!')
 
+    @property
+    def env_vars(self):
+        """
+        Attempt to enumerate any env_variables required
+        """
+        if self._env_vars is None:
+            variables = {}
+            comments = self.bug.get_comments()
+            tokens = comments[0].text.split(' ')
+            for token in tokens:
+                if token.startswith('`') and token.endswith('`'):
+                    token = token[1:-1]
+                if re.match(r'([a-z0-9_]+=[a-z0-9])', token, re.IGNORECASE):
+                    name, value = token.split('=')
+                    variables[name] = value
+
+            self._env_vars = variables
+
+        return self._env_vars
+
     def identify_prefs(self):
         """
         Identify prefs in working_dir
