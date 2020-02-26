@@ -118,13 +118,13 @@ class BugMonitor:
         """
         self.bugsy = bugsy
         self.bug = self.bugsy.get(bug_num, '_default')
+        self.working_dir = working_dir
         self.dry_run = dry_run
 
         # Raise if target os doesn't match current platform.system()
         self.os = self.identify_os()
 
         # Raise if testcase extraction fails
-        self.working_dir = working_dir
         self.testcase = self.extract_testcase()
 
         # Determine what type of bug we're evaluating
