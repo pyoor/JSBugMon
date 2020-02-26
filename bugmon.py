@@ -121,8 +121,6 @@ class BugMonitor:
         self.working_dir = working_dir
         self.dry_run = dry_run
 
-        # Raise if target os doesn't match current platform.system()
-        self.os = self.identify_os()
 
         # Raise if testcase extraction fails
         self.testcase = self.extract_testcase()
@@ -264,7 +262,8 @@ class BugMonitor:
 
         self.commands = commands
 
-    def identify_os(self):
+    @property
+    def os(self):
         """
         Attempt to enumerate the original OS associated with the bug
         """
