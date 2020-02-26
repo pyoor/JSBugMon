@@ -32,7 +32,6 @@ from datetime import datetime, timedelta
 import requests
 from autobisect.bisect import BisectionResult, Bisector
 from autobisect.build_manager import BuildManager
-from autobisect.config import BisectionConfig
 from autobisect.evaluator import BrowserEvaluator, JSEvaluator
 from bugsy import Bug, Bugsy
 from fuzzfetch import BuildFlags, Fetcher, FetcherException
@@ -145,8 +144,7 @@ class BugMonitor:
         self._build_flags = None
         self._arch = None
 
-        build_config = BisectionConfig()
-        self.build_manager = BuildManager(build_config)
+        self.build_manager = BuildManager()
 
         # Identify current mozilla-central release
         milestone = _get_url('https://hg.mozilla.org/mozilla-central/raw-file/tip/config/milestone.txt')
