@@ -318,6 +318,17 @@ class BugMonitor:
 
         raise BugException('Failed to identify testcase!')
 
+    def identify_prefs(self):
+        """
+        Identify prefs in working_dir
+        """
+        prefs_path = None
+        for filename in os.listdir(self.working_dir):
+            with open(os.path.join(self.working_dir, filename)) as f:
+                if filename.endswith('.js') and 'user_pref' in f.read():
+                    prefs_path = os.path.join(self.working_dir, filename)
+        return prefs_path
+
     def confirm_open(self, baseline):
         """
         Attempt to confirm open test cases
