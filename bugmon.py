@@ -145,6 +145,59 @@ class BugMonitor:
         self.central_version = int(version.split('.', 1)[0])
 
     @property
+    def arch(self):
+        """
+        Attempt to enumerate the original architecture associated with the bug
+        """
+        if self._arch is None:
+            if self.bug.platform == 'ARM':
+                return 'ARM64'
+            elif self.bug.platform == 'x86':
+                return 'i686'
+            elif self.bug.platform == 'x86_64':
+                return 'AMD64'
+
+        return platform.machine()
+
+    @property
+    def build_flags(self):
+        """
+        Attempt to enumerate build type based on flags listed in comment 0
+        """
+        if self._build_flags is None:
+            comments = self.bug.get_comments()
+            text = comments[0].text
+            asan = 'AddressSanitizer: ' in text or '--enable-address-sanitizer' in text
+            tsan = 'ThreadSanitizer: ' in text or '--enable-thread-sanitizer' in text
+            debug = '--enable-debug' in text
+            fuzzing = '--enable-fuzzing' in text
+            coverage = '--enable-coverage' in text
+            valgrind = False  # Ignore valgrind for now
+            self._build_flags = BuildFlags(asan, tsan, debug, fuzzing, coverage, valgrind)
+
+        return self._build_flags
+
+    @property
+    def env_vars(self):
+        """
+        Attempt to enumerate any env_variables required
+        """
+        if self._env_vars is None:
+            variables = {}
+            comments = self.bug.get_comments()
+            tokens = comments[0].text.split(' ')
+            for token in tokens:
+                if token.startswith('`') and token.endswith('`'):
+                    token = token[1:-1]
+                if re.match(r'([a-z0-9_]+=[a-z0-9])', token, re.IGNORECASE):
+                    name, value = token.split('=')
+                    variables[name] = value
+
+            self._env_vars = variables
+
+        return self._env_vars
+
+    @property
     def original_rev(self):
         """
         Attempt to enumerate the original rev specified in comment 0 or bugmon origRev command
@@ -170,6 +223,29 @@ class BugMonitor:
         return self._original_rev
 
     @property
+    def os(self):
+        """
+        Attempt to enumerate the original OS associated with the bug
+        """
+        op_sys = self.bug.op_sys
+        if op_sys is not None:
+            if 'Linux' in op_sys:
+                os_ = 'Linux'
+            elif 'Windows' in op_sys:
+                os_ = 'Windows'
+            elif 'Mac OS' in op_sys:
+                os_ = 'Darwin'
+            else:
+                os_ = platform.system()
+
+            if os_ != platform.system():
+                raise BugException('Cannot process non-native bug (%s)' % os_)
+            else:
+                return os_
+        else:
+            return platform.system()
+
+    @property
     def runtime_opts(self):
         """
         Attempt to enumerate the runtime flags specified in comment 0
@@ -180,39 +256,6 @@ class BugMonitor:
             return list(filter(lambda flag: flag in comment, ALLOWED_OPTS))
 
         return []
-
-    @property
-    def build_flags(self):
-        """
-        Attempt to enumerate build type based on flags listed in comment 0
-        """
-        if self._build_flags is None:
-            comments = self.bug.get_comments()
-            text = comments[0].text
-            asan = 'AddressSanitizer: ' in text or '--enable-address-sanitizer' in text
-            tsan = 'ThreadSanitizer: ' in text or '--enable-thread-sanitizer' in text
-            debug = '--enable-debug' in text
-            fuzzing = '--enable-fuzzing' in text
-            coverage = '--enable-coverage' in text
-            valgrind = False  # Ignore valgrind for now
-            self._build_flags = BuildFlags(asan, tsan, debug, fuzzing, coverage, valgrind)
-
-        return self._build_flags
-
-    @property
-    def arch(self):
-        """
-        Attempt to enumerate the original architecture associated with the bug
-        """
-        if self._arch is None:
-            if self.bug.platform == 'ARM':
-                return 'ARM64'
-            elif self.bug.platform == 'x86':
-                return 'i686'
-            elif self.bug.platform == 'x86_64':
-                return 'AMD64'
-
-        return platform.machine()
 
     @property
     def commands(self):
@@ -257,29 +300,6 @@ class BugMonitor:
 
         self.commands = commands
 
-    @property
-    def os(self):
-        """
-        Attempt to enumerate the original OS associated with the bug
-        """
-        op_sys = self.bug.op_sys
-        if op_sys is not None:
-            if 'Linux' in op_sys:
-                os_ = 'Linux'
-            elif 'Windows' in op_sys:
-                os_ = 'Windows'
-            elif 'Mac OS' in op_sys:
-                os_ = 'Darwin'
-            else:
-                os_ = platform.system()
-
-            if os_ != platform.system():
-                raise BugException('Cannot process non-native bug (%s)' % os_)
-            else:
-                return os_
-        else:
-            return platform.system()
-
     def fetch_attachments(self):
         """
         Download all attachments and store them in self.working_dir
@@ -316,26 +336,6 @@ class BugMonitor:
                 return os.path.join(self.working_dir, filename)
 
         raise BugException('Failed to identify testcase!')
-
-    @property
-    def env_vars(self):
-        """
-        Attempt to enumerate any env_variables required
-        """
-        if self._env_vars is None:
-            variables = {}
-            comments = self.bug.get_comments()
-            tokens = comments[0].text.split(' ')
-            for token in tokens:
-                if token.startswith('`') and token.endswith('`'):
-                    token = token[1:-1]
-                if re.match(r'([a-z0-9_]+=[a-z0-9])', token, re.IGNORECASE):
-                    name, value = token.split('=')
-                    variables[name] = value
-
-            self._env_vars = variables
-
-        return self._env_vars
 
     def identify_prefs(self):
         """
