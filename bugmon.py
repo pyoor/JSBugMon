@@ -121,9 +121,13 @@ class BugMonitor:
         self.working_dir = working_dir
         self.dry_run = dry_run
 
+        self._original_rev = None
+        self._build_flags = None
+        self._env_vars = None
+        self._arch = None
 
-        # Raise if testcase extraction fails
-        self.testcase = self.extract_testcase()
+        self.fetch_attachments()
+        self.testcase = self.identify_testcase()
 
         # Determine what type of bug we're evaluating
         if self.bug.component.startswith('Javascript Engine'):
@@ -131,16 +135,7 @@ class BugMonitor:
             self.evaluator = JSEvaluator(self.testcase, flags=self.runtime_opts)
         else:
             self.target = 'firefox'
-            prefs_path = None
-            for filename in os.listdir(self.working_dir):
-                with open(os.path.join(self.working_dir, filename)) as f:
-                    if filename.endswith('.js') and 'user_pref' in f.read():
-                        prefs_path = os.path.join(self.working_dir, filename)
-            self.evaluator = BrowserEvaluator(self.testcase, prefs=prefs_path)
-
-        self._original_rev = None
-        self._build_flags = None
-        self._arch = None
+            self.evaluator = BrowserEvaluator(self.testcase, env=self.env_vars, prefs=self.identify_prefs())
 
         self.build_manager = BuildManager()
 
