@@ -165,17 +165,24 @@ class BugMonitor:
         Attempt to enumerate build type based on flags listed in comment 0
         """
         if self._build_flags is None:
-            comments = self.bug.get_comments()
-            text = comments[0].text
-            asan = 'AddressSanitizer: ' in text or '--enable-address-sanitizer' in text
-            tsan = 'ThreadSanitizer: ' in text or '--enable-thread-sanitizer' in text
-            debug = '--enable-debug' in text
-            fuzzing = '--enable-fuzzing' in text
-            coverage = '--enable-coverage' in text
+            self.comment_zero
+            asan = 'AddressSanitizer: ' in self.comment_zero or '--enable-address-sanitizer' in self.comment_zero
+            tsan = 'ThreadSanitizer: ' in self.comment_zero or '--enable-thread-sanitizer' in self.comment_zero
+            debug = '--enable-debug' in self.comment_zero
+            fuzzing = '--enable-fuzzing' in self.comment_zero
+            coverage = '--enable-coverage' in self.comment_zero
             valgrind = False  # Ignore valgrind for now
             self._build_flags = BuildFlags(asan, tsan, debug, fuzzing, coverage, valgrind)
 
         return self._build_flags
+
+    @property
+    def comment_zero(self):
+        """
+        Helper function for retrieving comment zero
+        """
+        comments = self.bug.get_comments()
+        return comments[0].text
 
     @property
     def env_vars(self):
@@ -184,8 +191,7 @@ class BugMonitor:
         """
         if self._env_vars is None:
             variables = {}
-            comments = self.bug.get_comments()
-            tokens = comments[0].text.split(' ')
+            tokens = self.comment_zero.text.split(' ')
             for token in tokens:
                 if token.startswith('`') and token.endswith('`'):
                     token = token[1:-1]
@@ -206,8 +212,7 @@ class BugMonitor:
             if 'origRev' in self.commands and re.match('^([a-f0-9]{12}|[a-f0-9]{40})$', self.commands['origRev']):
                 self._original_rev = ['origRev']
             else:
-                comments = self.bug.get_comments()
-                tokens = comments[0].text.split(' ')
+                tokens = self.comment_zero.text.split(' ')
                 for token in tokens:
                     if re.match(r'^([a-f0-9]{12}|[a-f0-9]{40})$', token, re.IGNORECASE):
                         # Match 12 or 40 character revs
@@ -250,10 +255,8 @@ class BugMonitor:
         """
         Attempt to enumerate the runtime flags specified in comment 0
         """
-        comments = self.bug.get_comments()
-        if len(comments) >= 1:
-            comment = comments[0].text
-            return list(filter(lambda flag: flag in comment, ALLOWED_OPTS))
+        if self.comment_zero is not None:
+            return list(filter(lambda flag: flag in self.comment_zero, ALLOWED_OPTS))
 
         return []
 
