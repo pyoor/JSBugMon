@@ -121,10 +121,14 @@ class BugMonitor:
         self.working_dir = working_dir
         self.dry_run = dry_run
 
-        self._original_rev = None
-        self._build_flags = None
-        self._env_vars = None
+        # Initialize placeholders
         self._arch = None
+        self._build_flags = None
+        self._comment_zero = None
+        self._env_vars = None
+        self._original_rev = None
+        self._os = None
+        self._runtime_ops = None
 
         self.fetch_attachments()
         self.testcase = self.identify_testcase()
@@ -151,13 +155,15 @@ class BugMonitor:
         """
         if self._arch is None:
             if self.bug.platform == 'ARM':
-                return 'ARM64'
+                self._arch = 'ARM64'
             elif self.bug.platform == 'x86':
-                return 'i686'
+                self._arch = 'i686'
             elif self.bug.platform == 'x86_64':
-                return 'AMD64'
+                self._arch = 'AMD64'
+            else:
+                self._arch = platform.machine()
 
-        return platform.machine()
+        return self._arch
 
     @property
     def build_flags(self):
@@ -181,8 +187,11 @@ class BugMonitor:
         """
         Helper function for retrieving comment zero
         """
-        comments = self.bug.get_comments()
-        return comments[0].text
+        if self._comment_zero is None:
+            comments = self.bug.get_comments()
+            self._comment_zero = comments[0].text
+
+        return self._comment_zero
 
     @property
     def env_vars(self):
@@ -232,33 +241,36 @@ class BugMonitor:
         """
         Attempt to enumerate the original OS associated with the bug
         """
-        op_sys = self.bug.op_sys
-        if op_sys is not None:
-            if 'Linux' in op_sys:
-                os_ = 'Linux'
-            elif 'Windows' in op_sys:
-                os_ = 'Windows'
-            elif 'Mac OS' in op_sys:
-                os_ = 'Darwin'
-            else:
-                os_ = platform.system()
+        if self._os is None:
+            op_sys = self.bug.op_sys
+            if op_sys is not None:
+                if 'Linux' in op_sys:
+                    os_ = 'Linux'
+                elif 'Windows' in op_sys:
+                    os_ = 'Windows'
+                elif 'Mac OS' in op_sys:
+                    os_ = 'Darwin'
+                else:
+                    os_ = platform.system()
 
-            if os_ != platform.system():
-                raise BugException('Cannot process non-native bug (%s)' % os_)
+                if os_ != platform.system():
+                    raise BugException('Cannot process non-native bug (%s)' % os_)
+                else:
+                    self._os = os_
             else:
-                return os_
-        else:
-            return platform.system()
+                self._os = platform.system()
+
+        return self._os
 
     @property
     def runtime_opts(self):
         """
         Attempt to enumerate the runtime flags specified in comment 0
         """
-        if self.comment_zero is not None:
-            return list(filter(lambda flag: flag in self.comment_zero, ALLOWED_OPTS))
+        if self._runtime_ops is None:
+            self._runtime_ops = list(filter(lambda flag: flag in self.comment_zero, ALLOWED_OPTS))
 
-        return []
+        return self._runtime_ops
 
     @property
     def commands(self):
