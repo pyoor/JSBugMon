@@ -143,11 +143,6 @@ class BugMonitor:
 
         self.build_manager = BuildManager()
 
-        # Identify current mozilla-central release
-        milestone = _get_url('https://hg.mozilla.org/mozilla-central/raw-file/tip/config/milestone.txt')
-        version = milestone.text.splitlines()[-1]
-        self.central_version = int(version.split('.', 1)[0])
-
     @property
     def arch(self):
         """
@@ -433,10 +428,13 @@ class BugMonitor:
             comments.append(f"BugMon: Bug is marked as FIXED but it still reproduces on rev {test_rev}")
 
         # Only check branches if bug is marked as fixed
-        for rel_num in range(self.central_version - 2, self.central_version):
+        milestone = _get_url('https://hg.mozilla.org/mozilla-central/raw-file/tip/config/milestone.txt')
+        version = milestone.text.splitlines()[-1]
+        central_version = int(version.split('.', 1)[0])
+        for rel_num in range(central_version - 2, central_version):
             flag = f'cf_status_firefox{rel_num}'
             if getattr(self.bug, flag) == 'fixed':
-                branch = AVAILABLE_BRANCHES[self.central_version - rel_num]
+                branch = AVAILABLE_BRANCHES[central_version - rel_num]
                 baseline = self.reproduce_bug(branch)
                 if baseline.status == ReproductionResult.PASSED:
                     log.info(f"Verified fixed on Fx{rel_num}")
