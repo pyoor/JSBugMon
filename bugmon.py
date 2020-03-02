@@ -544,6 +544,7 @@ class BugMonitor:
             return ReproductionResult(ReproductionResult.NO_BUILD)
 
         with self.build_manager.get_build(build) as build_path:
+            log.info(f"Attempting to reproduce bug on mozilla-{branch} {build.build_id}-{build.changeset[:12]}")
             status = self.evaluator.evaluate_testcase(build_path)
             if status == Bisector.BUILD_CRASHED:
                 return ReproductionResult(ReproductionResult.CRASHED, build)
