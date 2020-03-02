@@ -371,20 +371,20 @@ class BugMonitor:
 
         comments = []
         if baseline.status == ReproductionResult.CRASHED:
-            log.info(f"Verified as reproducible on {baseline.build.changeset}...")
+            log.info(f"Verified as reproducible on {test_rev}...")
             if 'confirmed' not in self.commands:
-                comments.append(f"BugMon: Verified bug as reproducible on {baseline.build.changeset}")
+                comments.append(f"BugMon: Verified bug as reproducible on {test_rev}")
                 # Mark bug as confirmed
                 self.add_command('confirmed')
                 comments.append(self.bisect(find_fix=False))
             else:
                 last_change = datetime.strptime('2019-05-16T18:05:38Z', '%Y-%m-%dT%H:%M:%SZ')
                 if datetime.now() - timedelta(days=30) > last_change:
-                    comments.append(f"BugMon: Bug remains reproducible on {baseline.build.changeset}")
+                    comments.append(f"BugMon: Bug remains reproducible on {test_rev}")
         elif baseline.status == ReproductionResult.PASSED:
             # ToDo: Don't comment if we haven't confirmed the bug as open before
-            log.info(f"Unable to reproduce bug on {baseline.build.changeset}...")
-            comments.append(f"BugMon:Unable to reproduce bug on rev {baseline.build.changeset}")
+            log.info(f"Unable to reproduce bug on {test_rev}...")
+            comments.append(f"BugMon:Unable to reproduce bug on rev {test_rev}")
 
             if 'bugmon' in self.bug.keywords:
                 self.bug.keywords.remove('bugmon')
