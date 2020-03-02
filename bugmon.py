@@ -195,7 +195,7 @@ class BugMonitor:
         """
         if self._env_vars is None:
             variables = {}
-            tokens = self.comment_zero.text.split(' ')
+            tokens = self.comment_zero.split(' ')
             for token in tokens:
                 if token.startswith('`') and token.endswith('`'):
                     token = token[1:-1]
@@ -216,7 +216,7 @@ class BugMonitor:
             if 'origRev' in self.commands and re.match('^([a-f0-9]{12}|[a-f0-9]{40})$', self.commands['origRev']):
                 self._original_rev = ['origRev']
             else:
-                tokens = self.comment_zero.text.split(' ')
+                tokens = self.comment_zero.split(' ')
                 for token in tokens:
                     if re.match(r'^([a-f0-9]{12}|[a-f0-9]{40})$', token, re.IGNORECASE):
                         # Match 12 or 40 character revs
