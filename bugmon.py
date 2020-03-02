@@ -218,6 +218,9 @@ class BugMonitor:
             else:
                 tokens = self.comment_zero.split(' ')
                 for token in tokens:
+                    if token.startswith('`') and token.endswith('`'):
+                        token = token[1:-1]
+
                     if re.match(r'^([a-f0-9]{12}|[a-f0-9]{40})$', token, re.IGNORECASE):
                         # Match 12 or 40 character revs
                         self._original_rev = token
