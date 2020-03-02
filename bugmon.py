@@ -418,8 +418,16 @@ class BugMonitor:
 
         comments = []
         if baseline.status == ReproductionResult.PASSED:
-            log.info(f"Verified as fixed on rev {test_rev}")
-            comments.append(f"BugMon: Verified bug as fixed on rev {test_rev}")
+            if self.original_rev is not None:
+                initial = self.reproduce_bug('central', self.original_rev)
+                if initial.status != ReproductionResult.CRASHED:
+                    msg = f"Bug appears to be fixed on rev {test_rev} but " \
+                          f"BugMon was unable to reproduce using the initial rev {self.original_rev}"
+                    log.info(msg)
+                    comments.append(f"BugMon: {msg}")
+                else:
+                    log.info(f"Verified as fixed on rev {test_rev}")
+                    comments.append(f"BugMon: Verified bug as fixed on rev {test_rev}")
 
             if 'bugmon' in self.bug.keywords:
                 self.bug.keywords.remove('bugmon')
