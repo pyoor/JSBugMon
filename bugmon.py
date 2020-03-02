@@ -485,7 +485,7 @@ class BugMonitor:
 
         if result.status != BisectionResult.SUCCESS:
             log.warning(f'Failed to bisect testcase')
-            output = [f'Bugmon: Failed to bisect testcase ({result.message})',
+            output = [f'BugMon: Failed to bisect testcase ({result.message})',
                       f'> Start: {result.start.changeset} ({result.start.build_id})',
                       f'> End: {result.end.changeset} ({result.end.build_id})']
             return "\n".join(output)
@@ -499,16 +499,17 @@ class BugMonitor:
             log.info(text)
 
         range_string = "\n".join(output)
-        return f'Bugmon: Reduced build range to...\n{range_string}'
+        return f'BugMon: Reduced build range to...\n{range_string}'
 
     def process(self):
         """
-        Process Bugmon commands present in whiteboard
+        Process bugmon commands present in whiteboard
 
         Available commands:
         verify - Attempt to verify the bug state
         bisect - Attempt to bisect the bug regression or, if RESOLVED, the bug fix
         """
+
         baseline = self.reproduce_bug('central')
         if baseline.status == ReproductionResult.NO_BUILD:
             log.warning(f'Could not find matching build to verify status')
