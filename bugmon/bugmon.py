@@ -15,7 +15,6 @@
 #
 # ***** END LICENSE BLOCK *****
 
-import argparse
 import base64
 import binascii
 import io
@@ -24,8 +23,6 @@ import logging
 import os
 import platform
 import re
-import sys
-import tempfile
 import zipfile
 from datetime import datetime, timedelta
 
@@ -33,7 +30,6 @@ import requests
 from autobisect.bisect import BisectionResult, Bisector
 from autobisect.build_manager import BuildManager
 from autobisect.evaluator import BrowserEvaluator, JSEvaluator
-from bugsy import Bug, Bugsy
 from fuzzfetch import BuildFlags, Fetcher, FetcherException
 from fuzzfetch.fetch import Platform
 
@@ -605,61 +601,3 @@ class BugMonitor:
             if diff:
                 self.bugsy.put(self.bug)
                 self.bug.update()
-
-
-def parse_args(argv=None):
-    parser = argparse.ArgumentParser()
-
-    # Optional args
-    parser.add_argument('-d', '--dry-run', action='store_true', help="If enabled, don't make any remote changes")
-
-    # Bug selection
-    bug_list = parser.add_mutually_exclusive_group(required=True)
-    bug_list.add_argument('--bugs', nargs='+', help='Space separated list of bug numbers')
-    bug_list.add_argument('-s', '--search-params', help='Path to advanced search parameters')
-    args = parser.parse_args(argv)
-
-    if args.search_params and not os.path.isfile(args.search_params):
-        raise parser.error('Search parameter path does not exist!')
-
-    return args
-
-
-def console_init_logging():
-    log_level = logging.INFO
-    log_fmt = "[%(asctime)s] %(message)s"
-    if bool(os.getenv("DEBUG")):
-        log_level = logging.DEBUG
-        log_fmt = "%(levelname).1s %(name)s [%(asctime)s] %(message)s"
-    logging.basicConfig(format=log_fmt, datefmt="%Y-%m-%d %H:%M:%S", level=log_level)
-
-
-def main(argv=None):
-    args = parse_args(argv)
-
-    # Get the API root, default to bugzilla.mozilla.org
-    api_root = os.environ.get('BZ_API_ROOT')
-    api_key = os.environ.get('BZ_API_KEY')
-
-    bugsy = Bugsy(api_key=api_key, bugzilla_url=api_root)
-
-    bug_ids = []
-    if args.bugs:
-        bug_ids.extend(args.bugs)
-    else:
-        with open(args.search_params) as f:
-            params = json.load(f)
-            response = bugsy.request('bug', params=params)
-            bugs = [Bug(bugsy, **bug) for bug in response['bugs']]
-            bug_ids.extend([bug.id for bug in bugs])
-
-    for bug_id in bug_ids:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            bugmon = BugMonitor(bugsy, bug_id, temp_dir, args.dry_run)
-            log.info(f"Analyzing bug {bug_id} (Status: {bugmon.bug.status}, Resolution: {bugmon.bug.resolution})")
-            bugmon.process()
-
-
-if __name__ == '__main__':
-    console_init_logging()
-    sys.exit(main())
