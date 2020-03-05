@@ -136,7 +136,7 @@ class BugMonitor:
         self.testcase = self.identify_testcase()
 
         # Determine what type of bug we're evaluating
-        if self.bug.component.startswith('Javascript Engine'):
+        if self.bug.component.startswith('JavaScript Engine'):
             self.target = 'js'
             self.evaluator = JSEvaluator(self.testcase, flags=self.runtime_opts)
         else:
