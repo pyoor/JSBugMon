@@ -592,8 +592,7 @@ class BugMonitor:
             if rev is not None:
                 build = Fetcher(self.target, branch, rev, self.build_flags, platform_, nearest=Fetcher.BUILD_ORDER_ASC)
             else:
-                build = Fetcher(self.target, branch, 'latest', self.build_flags, platform_,
-                                nearest=Fetcher.BUILD_ORDER_DESC)
+                build = Fetcher(self.target, branch, 'latest', self.build_flags, platform_)
         except FetcherException as e:
             log.error(f"Error fetching build: {e}")
             return ReproductionResult(ReproductionResult.NO_BUILD)
