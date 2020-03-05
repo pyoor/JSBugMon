@@ -341,8 +341,12 @@ class BugMonitor:
 
     @commands.setter
     def commands(self, value):
-        parts = [f"{k}={v}" if v is not None else k for k, v in value.items()]
-        self.bug.whiteboard = re.sub(r'(?<=bugmon:)(.[^\]]*)', ','.join(parts), self.bug.whiteboard)
+        parts = ','.join([f"{k}={v}" if v is not None else k for k, v in value.items()])
+        if len(parts):
+            if re.match(r'(?<=bugmon:)(.[^\]]*)', self.bug.whiteboard):
+                self.bug.whiteboard = re.sub(r'(?<=bugmon:)(.[^\]]*)', parts, self.bug.whiteboard)
+            else:
+                self.bug.whiteboard += f'[bugmon:{parts}]'
 
     def add_command(self, key, value=None):
         """
