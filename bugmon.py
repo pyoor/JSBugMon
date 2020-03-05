@@ -127,7 +127,6 @@ class BugMonitor:
         self._branches = None
         self._build_flags = None
         self._comment_zero = None
-        self._env_vars = None
         self._original_rev = None
         self._os = None
 
@@ -243,19 +242,16 @@ class BugMonitor:
         """
         Attempt to enumerate any env_variables required
         """
-        if self._env_vars is None:
-            variables = {}
-            tokens = self.comment_zero.split(' ')
-            for token in tokens:
-                if token.startswith('`') and token.endswith('`'):
-                    token = token[1:-1]
-                if re.match(r'([a-z0-9_]+=[a-z0-9])', token, re.IGNORECASE):
-                    name, value = token.split('=')
-                    variables[name] = value
+        variables = {}
+        tokens = self.comment_zero.split(' ')
+        for token in tokens:
+            if token.startswith('`') and token.endswith('`'):
+                token = token[1:-1]
+            if re.match(r'([a-z0-9_]+=[a-z0-9])', token, re.IGNORECASE):
+                name, value = token.split('=')
+                variables[name] = value
 
-            self._env_vars = variables
-
-        return self._env_vars
+        return variables
 
     @property
     def original_rev(self):
