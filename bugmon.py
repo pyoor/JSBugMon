@@ -123,6 +123,8 @@ class BugMonitor:
 
         # Initialize placeholders
         self._arch = None
+        self._branch = None
+        self._branches = None
         self._build_flags = None
         self._comment_zero = None
         self._env_vars = None
@@ -143,6 +145,11 @@ class BugMonitor:
 
         self.build_manager = BuildManager()
 
+        # Identify mozilla-central version number
+        milestone = _get_url('https://hg.mozilla.org/mozilla-central/raw-file/tip/config/milestone.txt')
+        version = milestone.text.splitlines()[-1]
+        self.central_version = int(version.split('.', 1)[0])
+
     @property
     def arch(self):
         """
@@ -159,6 +166,50 @@ class BugMonitor:
                 self._arch = platform.machine()
 
         return self._arch
+
+    @property
+    def version(self):
+        match = re.match(r'\d+', self.bug.version)
+        if match:
+            return match.group(0)
+
+        return self.central_version
+
+    @property
+    def branch(self):
+        """
+        Attempt to enumerate the branch the bug was filed against
+        """
+        if self._branch is None:
+            for alias, actual in self.branches.items():
+                if self.version == actual:
+                    self._branch = alias
+                    break
+
+        return self._branch
+
+    @property
+    def branches(self):
+        """
+        Create map of fuzzfetch branch aliases and bugzilla version tags
+        :return:
+        """
+        if self._branches is None:
+            self._branches = {
+                'central': self.central_version,
+                'beta': self.central_version - 1,
+                'release': self.central_version - 2,
+            }
+
+            for alias in ['esr-next', 'esr-stable']:
+                try:
+                    rel_num = Fetcher.resolve_esr(alias)
+                    if rel_num is not None:
+                        self._branches[rel_num] = rel_num
+                except FetcherException:
+                    pass
+
+        return self._branches
 
     @property
     def build_flags(self):
