@@ -561,7 +561,14 @@ class BugMonitor:
         bisect - Attempt to bisect the bug regression or, if RESOLVED, the bug fix
         """
 
-        baseline = self.reproduce_bug('central')
+        if self.branch is None:
+            if 'bugmon' in self.bug.keywords:
+                self.bug.keywords.remove('bugmon')
+            log.warning(f'Bug filed against non-supported branch ({self.version})')
+            self.report([f'Bug filed against non-supported branch ({self.version})'])
+            return
+
+        baseline = self.reproduce_bug(self.branch)
         if baseline.status == ReproductionResult.NO_BUILD:
             log.warning(f'Could not find matching build to verify status')
             return
