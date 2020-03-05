@@ -130,7 +130,6 @@ class BugMonitor:
         self._env_vars = None
         self._original_rev = None
         self._os = None
-        self._runtime_ops = None
 
         self.fetch_attachments()
         self.testcase = self.identify_testcase()
@@ -316,10 +315,7 @@ class BugMonitor:
         """
         Attempt to enumerate the runtime flags specified in comment 0
         """
-        if self._runtime_ops is None:
-            self._runtime_ops = list(filter(lambda flag: flag in self.comment_zero, ALLOWED_OPTS))
-
-        return self._runtime_ops
+        return list(filter(lambda flag: flag in self.comment_zero, ALLOWED_OPTS))
 
     @property
     def commands(self):
