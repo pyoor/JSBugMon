@@ -614,6 +614,11 @@ class BugMonitor:
         :return:
         """
         diff = self.bug.diff()
+        for message in messages:
+            for line in message.splitlines():
+                log.info(f"Comment: {line}")
+        log.info(f"Changes: {json.dumps(diff)}")
+
         if not self.dry_run:
             for message in messages:
                 self.bug.add_comment(message)
@@ -622,11 +627,6 @@ class BugMonitor:
             if diff:
                 self.bugsy.put(self.bug)
                 self.bug.update()
-        else:
-            for message in messages:
-                for line in message.splitlines():
-                    log.info(f"Comment: {line}")
-            log.info(f"Changes: {json.dumps(diff)}")
 
 
 def parse_args(argv=None):
