@@ -489,26 +489,21 @@ class BugMonitor:
             log.info(f"Bug is marked as resolved but still reproduces on rev {test_rev}")
             comments.append(f"BugMon: Bug is marked as FIXED but it still reproduces on rev {test_rev}")
 
-        # Only check branches if bug is marked as fixed
-        milestone = _get_url('https://hg.mozilla.org/mozilla-central/raw-file/tip/config/milestone.txt')
-        version = milestone.text.splitlines()[-1]
-        central_version = int(version.split('.', 1)[0])
-        for rel_num in range(central_version - 2, central_version):
-            flag = f'cf_status_firefox{rel_num}'
-            if getattr(self.bug, flag) == 'fixed':
-                branch = AVAILABLE_BRANCHES[central_version - rel_num]
-                baseline = self.reproduce_bug(branch)
-                if baseline.status == ReproductionResult.PASSED:
-                    log.info(f"Verified fixed on Fx{rel_num}")
-                    comments.append(f"BugMon: Verified bug as fixed on Fx{rel_num}")
+        for alias, rel_num in self.branches.items():
+            if isinstance(rel_num, int):
+                flag = f'cf_status_firefox{rel_num}'
+            else:
+                flag = f'cf_status_firefox_{rel_num}'
 
-                    # Mark branch as verified
+            # Only check branches if bug is marked as fixed
+            if getattr(self.bug, flag) == 'fixed':
+                baseline = self.reproduce_bug(alias)
+                if baseline.status == ReproductionResult.PASSED:
+                    log.info(f"Verified fixed on {flag}")
                     setattr(self.bug, flag, 'verified')
                 elif baseline.status == ReproductionResult.CRASHED:
-                    log.info(f"Bug remains vulnerable on Fx{rel_num}")
-                    # Mark branch as affected
-                    if getattr(self.bug, flag) != 'affected':
-                        setattr(self.bug, flag, 'affected')
+                    log.info(f"Bug remains vulnerable on {flag}")
+                    setattr(self.bug, flag, 'affected')
 
         self.report(comments)
 
