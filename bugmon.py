@@ -122,13 +122,12 @@ class BugMonitor:
         self.dry_run = dry_run
 
         # Initialize placeholders
-        self._arch = None
         self._branch = None
         self._branches = None
         self._build_flags = None
         self._comment_zero = None
         self._original_rev = None
-        self._os = None
+        self._platform = None
 
         self.fetch_attachments()
         self.testcase = self.identify_testcase()
@@ -147,23 +146,6 @@ class BugMonitor:
         milestone = _get_url('https://hg.mozilla.org/mozilla-central/raw-file/tip/config/milestone.txt')
         version = milestone.text.splitlines()[-1]
         self.central_version = int(version.split('.', 1)[0])
-
-    @property
-    def arch(self):
-        """
-        Attempt to enumerate the original architecture associated with the bug
-        """
-        if self._arch is None:
-            if self.bug.platform == 'ARM':
-                self._arch = 'ARM64'
-            elif self.bug.platform == 'x86':
-                self._arch = 'i686'
-            elif self.bug.platform == 'x86_64':
-                self._arch = 'AMD64'
-            else:
-                self._arch = platform.machine()
-
-        return self._arch
 
     @property
     def version(self):
@@ -281,30 +263,34 @@ class BugMonitor:
         return self._original_rev
 
     @property
-    def os(self):
+    def platform(self):
         """
-        Attempt to enumerate the original OS associated with the bug
+        Attempt to enumerate the target platform
+        :return:
         """
-        if self._os is None:
-            op_sys = self.bug.op_sys
-            if op_sys is not None:
-                if 'Linux' in op_sys:
-                    os_ = 'Linux'
-                elif 'Windows' in op_sys:
-                    os_ = 'Windows'
-                elif 'Mac OS' in op_sys:
-                    os_ = 'Darwin'
-                else:
-                    os_ = platform.system()
+        if self._platform is None:
+            os_ = platform.system()
+            if 'Linux' in self.bug.op_sys:
+                os_ = 'Linux'
+            elif 'Windows' in self.bug.op_sys:
+                os_ = 'Windows'
+            elif 'Mac OS' in self.bug.op_sys:
+                os_ = 'Darwin'
 
-                if os_ != platform.system():
-                    raise BugException('Cannot process non-native bug (%s)' % os_)
-                else:
-                    self._os = os_
-            else:
-                self._os = platform.system()
+            if os_ != platform.system():
+                raise BugException('Cannot process non-native bug (%s)' % os_)
 
-        return self._os
+            arch = platform.machine()
+            if self.bug.platform == 'ARM':
+                arch = 'ARM64'
+            elif self.bug.platform == 'x86':
+                arch = 'i686'
+            elif self.bug.platform == 'x86_64':
+                arch = 'AMD64'
+
+            self._platform = Platform(os_, arch)
+
+        return self._platform
 
     @property
     def runtime_opts(self):
@@ -515,8 +501,8 @@ class BugMonitor:
             start = self.original_rev
             end = 'latest'
 
-        platform_ = Platform(self.os, self.arch)
-        bisector = Bisector(self.evaluator, self.target, self.branch, start, end, self.build_flags, platform_, find_fix)
+        bisector = Bisector(self.evaluator, self.target, self.branch, start, end, self.build_flags, self.platform,
+                            find_fix)
         result = bisector.bisect()
 
         # Remove bisect command
@@ -580,11 +566,12 @@ class BugMonitor:
 
     def reproduce_bug(self, branch, rev=None):
         try:
-            platform_ = Platform(self.os, self.arch)
-            if rev is not None:
-                build = Fetcher(self.target, branch, rev, self.build_flags, platform_, nearest=Fetcher.BUILD_ORDER_ASC)
-            else:
-                build = Fetcher(self.target, branch, 'latest', self.build_flags, platform_)
+            direction = Fetcher.BUILD_ORDER_ASC
+            if rev is None:
+                rev = 'latest'
+                direction = None
+
+            build = Fetcher(self.target, branch, rev, self.build_flags, self.platform, nearest=direction)
         except FetcherException as e:
             log.error(f"Error fetching build: {e}")
             return ReproductionResult(ReproductionResult.NO_BUILD)
