@@ -483,12 +483,10 @@ class BugMonitor:
                 else:
                     log.info(f"Verified as fixed on rev {test_rev}")
                     comments.append(f"BugMon: Verified bug as fixed on rev {test_rev}")
+                    self.bug.status = "VERIFIED"
 
             if 'bugmon' in self.bug.keywords:
                 self.bug.keywords.remove('bugmon')
-
-            if 'close' in self.commands:
-                self.bug.status = "VERIFIED"
         elif baseline.status == ReproductionResult.CRASHED:
             log.info(f"Bug is marked as resolved but still reproduces on rev {test_rev}")
             comments.append(f"BugMon: Bug is marked as FIXED but it still reproduces on rev {test_rev}")
