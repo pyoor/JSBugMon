@@ -197,7 +197,6 @@ class BugMonitor:
         Attempt to enumerate build type based on flags listed in comment 0
         """
         if self._build_flags is None:
-            self.comment_zero
             asan = 'AddressSanitizer: ' in self.comment_zero or '--enable-address-sanitizer' in self.comment_zero
             tsan = 'ThreadSanitizer: ' in self.comment_zero or '--enable-thread-sanitizer' in self.comment_zero
             debug = '--enable-debug' in self.comment_zero
