@@ -445,7 +445,7 @@ class BugMonitor:
                 self.bug.resolution = 'WORKSFORME'
 
             if self.original_rev is not None:
-                original_result = self.reproduce_bug('central', self.original_rev)
+                original_result = self.reproduce_bug(self.branch, self.original_rev)
                 if original_result.status == ReproductionResult.CRASHED:
                     log.info(f"Initial rev ({self.original_rev} crashes but {test_rev} does not")
                     log.info(f"Attempting to bisect the fix")
@@ -470,7 +470,7 @@ class BugMonitor:
         comments = []
         if baseline.status == ReproductionResult.PASSED:
             if self.original_rev is not None:
-                initial = self.reproduce_bug('central', self.original_rev)
+                initial = self.reproduce_bug(self.branch, self.original_rev)
                 if initial.status != ReproductionResult.CRASHED:
                     msg = f"Bug appears to be fixed on rev {test_rev} but " \
                           f"BugMon was unable to reproduce using the initial rev {self.original_rev}"
@@ -527,7 +527,7 @@ class BugMonitor:
             end = 'latest'
 
         platform_ = Platform(self.os, self.arch)
-        bisector = Bisector(self.evaluator, self.target, 'central', start, end, self.build_flags, platform_, find_fix)
+        bisector = Bisector(self.evaluator, self.target, self.branch, start, end, self.build_flags, platform_, find_fix)
         result = bisector.bisect()
 
         # Remove bisect command
