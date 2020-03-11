@@ -56,7 +56,7 @@ def main(argv=None):
             params = json.load(f)
             response = bugsy.request('bug', params=params)
             bugs = [Bug(bugsy, **bug) for bug in response['bugs']]
-            bug_ids.extend([bug.id for bug in bugs])
+            bug_ids.extend(sorted([bug.id for bug in bugs]))
 
     for bug_id in bug_ids:
         with tempfile.TemporaryDirectory() as temp_dir:
