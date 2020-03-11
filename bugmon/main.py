@@ -7,6 +7,7 @@ import tempfile
 
 from bugsy import Bug, Bugsy
 
+from bugmon import BugMonitor, BugException
 
 log = logging.getLogger("bugmon")
 
@@ -58,9 +59,12 @@ def main(argv=None):
 
     for bug_id in bug_ids:
         with tempfile.TemporaryDirectory() as temp_dir:
-            bugmon = BugMonitor(bugsy, bug_id, temp_dir, args.dry_run)
-            log.info(f"Analyzing bug {bug_id} (Status: {bugmon.bug.status}, Resolution: {bugmon.bug.resolution})")
-            bugmon.process()
+            try:
+                bugmon = BugMonitor(bugsy, bug_id, temp_dir, args.dry_run)
+                log.info(f"Analyzing bug {bug_id} (Status: {bugmon.bug.status}, Resolution: {bugmon.bug.resolution})")
+                bugmon.process()
+            except BugException as e:
+                log.error(f'Error processing bug {bug_id}: {e}')
 
 
 if __name__ == '__main__':
