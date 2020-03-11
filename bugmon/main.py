@@ -39,6 +39,7 @@ def console_init_logging():
 
 
 def main(argv=None):
+    console_init_logging()
     args = parse_args(argv)
 
     # Get the API root, default to bugzilla.mozilla.org
@@ -68,5 +69,4 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    console_init_logging()
     sys.exit(main())
