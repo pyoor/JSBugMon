@@ -8,6 +8,8 @@ import tempfile
 from bugsy import Bug, Bugsy
 
 
+log = logging.getLogger("bugmon")
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser()
 
