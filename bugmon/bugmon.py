@@ -127,8 +127,10 @@ class BugMonitor:
         self._original_rev = None
         self._platform = None
 
+        self.testcase = None
         self.fetch_attachments()
-        self.testcase = self.identify_testcase()
+        if self.testcase is None:
+            raise BugException('Failed to identify testcase!')
 
         # Determine what type of bug we're evaluating
         if self.bug.component.startswith('JavaScript Engine'):
@@ -371,19 +373,18 @@ class BugMonitor:
                     if os.path.exists(filename):
                         log.warning('Duplicate filename identified: ', filename)
                     z.extract(filename, self.working_dir)
+                    if filename.lower().startswith('testcase'):
+                        if self.testcase is not None:
+                            raise BugException('Multiple testcases identified!')
+                        self.testcase = os.path.join(self.working_dir, filename)
             else:
                 with open(os.path.join(self.working_dir, attachment.file_name), 'wb') as file:
                     file.write(data)
-
-    def identify_testcase(self):
-        """
-        Identify testcase in working_dir
-        """
-        for filename in os.listdir(self.working_dir):
-            if filename.lower().startswith('testcase'):
-                return os.path.join(self.working_dir, filename)
-
-        raise BugException('Failed to identify testcase!')
+                    r = re.compile(r'^testcase.*$', re.IGNORECASE)
+                    if list(filter(r.match, [attachment.file_name, attachment.description])):
+                        if self.testcase is not None:
+                            raise BugException('Multiple testcases identified!')
+                        self.testcase = file.name
 
     def identify_prefs(self):
         """
