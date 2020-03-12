@@ -124,7 +124,7 @@ class BugMonitor:
         self._branches = None
         self._build_flags = None
         self._comment_zero = None
-        self._original_rev = None
+        self._initial_build_id = None
         self._platform = None
 
         self.testcase = None
@@ -235,13 +235,13 @@ class BugMonitor:
         return variables
 
     @property
-    def original_rev(self):
+    def initial_build_id(self):
         """
         Attempt to enumerate the original rev specified in comment 0 or bugmon origRev command
         """
-        if self._original_rev is None:
+        if self._initial_build_id is None:
             if 'origRev' in self.commands and re.match('^([a-f0-9]{12}|[a-f0-9]{40})$', self.commands['origRev']):
-                self._original_rev = ['origRev']
+                self._initial_build_id = ['origRev']
             else:
                 tokens = self.comment_zero.split(' ')
                 for token in tokens:
@@ -250,16 +250,17 @@ class BugMonitor:
 
                     if re.match(r'^([a-f0-9]{12}|[a-f0-9]{40})$', token, re.IGNORECASE):
                         # Match 12 or 40 character revs
-                        self._original_rev = token
+                        self._initial_build_id = token
                         break
                     elif re.match(r'^([0-9]{8}-)([a-f0-9]{12})$', token, re.IGNORECASE):
                         # Match fuzzfetch build identifiers
-                        self._original_rev = token.split('-')[1]
+                        self._initial_build_id = token.split('-')[1]
                         break
                 else:
-                    self._original_rev = None
+                    # If original rev isn't specified, use the date the bug was created
+                    self._initial_build_id = self.bug.creation_time.split('T')[0]
 
-        return self._original_rev
+        return self._initial_build_id
 
     @property
     def platform(self):
@@ -413,18 +414,18 @@ class BugMonitor:
                 if datetime.now() - timedelta(days=30) > last_change:
                     self.report(f"Bug remains reproducible on {baseline.build_str}")
         elif baseline.status == ReproductionResult.PASSED:
-            self.report(f"Unable to reproduce bug on {baseline.build_str}.")
+            original_result = self.reproduce_bug(self.branch, self.initial_build_id)
+            if original_result.status == ReproductionResult.CRASHED:
+                log.info(f"Testcase crashes using the initial build ({original_result.build_str})")
+                self.bisect(find_fix=True)
+            else:
+                self.report(f"Unable to reproduce bug using the following builds:",
+                            f"> {baseline.build_str}",
+                            f"> {original_result.build_str}")
 
             if 'close' in self.commands:
                 self.bug.status = 'RESOLVED'
                 self.bug.resolution = 'WORKSFORME'
-
-            if self.original_rev is not None:
-                original_result = self.reproduce_bug(self.branch, self.original_rev)
-                if original_result.status == ReproductionResult.CRASHED:
-                    log.info(f"Testcase crashes using the initial build ({original_result.build_str})")
-                    self.bisect(find_fix=True)
-
             if 'bugmon' in self.bug.keywords:
                 self.bug.keywords.remove('bugmon')
                 self.report(
@@ -445,15 +446,13 @@ class BugMonitor:
 
         """
         if baseline.status == ReproductionResult.PASSED:
-            # ToDo: Pull original_rev from date
-            if self.original_rev is not None:
-                initial = self.reproduce_bug(self.branch, self.original_rev)
-                if initial.status != ReproductionResult.CRASHED:
-                    self.report(f"Bug appears to be fixed on rev {baseline.build_str} but "
-                                f"BugMon was unable to reproduce using the initial rev {self.original_rev}.")
-                else:
-                    self.report(f"Verified bug as fixed on rev {baseline.build_str}.")
-                    self.bug.status = "VERIFIED"
+            initial = self.reproduce_bug(self.branch, self.initial_build_id)
+            if initial.status != ReproductionResult.CRASHED:
+                self.report(f"Bug appears to be fixed on rev {baseline.build_str} but "
+                            f"BugMon was unable to reproduce using {self.initial_build_id}.")
+            else:
+                self.report(f"Verified bug as fixed on rev {baseline.build_str}.")
+                self.bug.status = "VERIFIED"
 
             if 'bugmon' in self.bug.keywords:
                 self.bug.keywords.remove('bugmon')
@@ -462,7 +461,7 @@ class BugMonitor:
                     "Please review the bug and re-add the keyword for further analysis."
                 )
         elif baseline.status == ReproductionResult.CRASHED:
-            self.report(f"Bug is marked as resolved but still reproduces on rev {baseline.build_str}.")
+            self.report(f"Bug is marked as resolved but still reproduces using {baseline.build_str}.")
 
         for alias, rel_num in self.branches.items():
             if isinstance(rel_num, int):
@@ -489,9 +488,9 @@ class BugMonitor:
         """
         if not find_fix:
             start = None
-            end = self.original_rev
+            end = self.initial_build_id
         else:
-            start = self.original_rev
+            start = self.initial_build_id
             end = 'latest'
 
         bisector = Bisector(self.evaluator, self.target, self.branch, start, end, self.build_flags, self.platform,
@@ -506,8 +505,7 @@ class BugMonitor:
             output = [f'Failed to bisect testcase ({result.message}):',
                       f'> Start: {result.start.changeset} ({result.start.build_id})',
                       f'> End: {result.end.changeset} ({result.end.build_id})',
-                      f'> BuildFlags: {str(self.build_flags)}',
-                      f'> RunFlags: {", ".join(self.runtime_opts)}']
+                      f'> BuildFlags: {str(self.build_flags)}']
             self.report(*output)
         else:
             output = [f'> Start: {result.start.changeset} ({result.start.build_id})',
@@ -566,14 +564,14 @@ class BugMonitor:
                 self.bug.update()
                 self.queue = []
 
-    def reproduce_bug(self, branch, rev=None):
+    def reproduce_bug(self, branch, build_id=None):
         try:
             direction = Fetcher.BUILD_ORDER_ASC
-            if rev is None:
-                rev = 'latest'
+            if build_id is None:
+                build_id = 'latest'
                 direction = None
 
-            build = Fetcher(self.target, branch, rev, self.build_flags, self.platform, nearest=direction)
+            build = Fetcher(self.target, branch, build_id, self.build_flags, self.platform, nearest=direction)
         except FetcherException as e:
             log.error(f"Error fetching build: {e}")
             return ReproductionResult(ReproductionResult.NO_BUILD)
