@@ -99,9 +99,9 @@ class ReproductionResult(object):
     FAILED = 2
     NO_BUILD = 3
 
-    def __init__(self, status, build=None):
+    def __init__(self, status, build_str=None):
         self.status = status
-        self.build = build
+        self.build_str = build_str
 
 
 class BugMonitor:
@@ -117,6 +117,7 @@ class BugMonitor:
         self.bug = self.bugsy.get(bug_num, '_default')
         self.working_dir = working_dir
         self.dry_run = dry_run
+        self.queue = []
 
         # Initialize placeholders
         self._branch = None
@@ -401,27 +402,17 @@ class BugMonitor:
 
         :param baseline: A reproduction result
         """
-        test_rev = baseline.build.changeset[:12]
-
-        comments = []
         if baseline.status == ReproductionResult.CRASHED:
-            log.info(f"Verified as reproducible on {test_rev}...")
             if 'confirmed' not in self.commands:
-                comments.append(f"BugMon: Verified bug as reproducible on {test_rev}")
-                # Mark bug as confirmed
                 self.add_command('confirmed')
-                comments.append(self.bisect(find_fix=False))
+                self.report(f"Verified bug as reproducible on {baseline.build_str}")
+                self.bisect(find_fix=False)
             else:
-                last_change = datetime.strptime('2019-05-16T18:05:38Z', '%Y-%m-%dT%H:%M:%SZ')
+                last_change = datetime.strptime(self.bug.last_change_time, '%Y-%m-%dT%H:%M:%SZ')
                 if datetime.now() - timedelta(days=30) > last_change:
-                    comments.append(f"BugMon: Bug remains reproducible on {test_rev}")
+                    self.report(f"Bug remains reproducible on {baseline.build_str}")
         elif baseline.status == ReproductionResult.PASSED:
-            # ToDo: Don't comment if we haven't confirmed the bug as open before
-            log.info(f"Unable to reproduce bug on {test_rev}...")
-            comments.append(f"BugMon:Unable to reproduce bug on rev {test_rev}")
-
-            if 'bugmon' in self.bug.keywords:
-                self.bug.keywords.remove('bugmon')
+            self.report(f"Unable to reproduce bug on {baseline.build_str}.")
 
             if 'close' in self.commands:
                 self.bug.status = 'RESOLVED'
@@ -430,15 +421,19 @@ class BugMonitor:
             if self.original_rev is not None:
                 original_result = self.reproduce_bug(self.branch, self.original_rev)
                 if original_result.status == ReproductionResult.CRASHED:
-                    log.info(f"Initial rev ({self.original_rev} crashes but {test_rev} does not")
-                    log.info(f"Attempting to bisect the fix")
-                    comments.append(self.bisect(find_fix=True))
+                    log.info(f"Testcase crashes using the initial build ({original_result.build_str})")
+                    self.bisect(find_fix=True)
+
+            if 'bugmon' in self.bug.keywords:
+                self.bug.keywords.remove('bugmon')
+                self.report(
+                    "Removing bugmon keyword as no further action possible.",
+                    "Please review the bug and re-add the keyword for further analysis."
+                )
 
         # Remove the confirm command
         if 'confirm' in self.commands:
             self.remove_command('confirm')
-
-        self.report(comments)
 
     def verify_fixed(self, baseline):
         """
@@ -448,27 +443,25 @@ class BugMonitor:
         All other bugs will be tested to determine if the bug still reproduces
 
         """
-        test_rev = baseline.build.changeset[:12]
-
-        comments = []
         if baseline.status == ReproductionResult.PASSED:
+            # ToDo: Pull original_rev from date
             if self.original_rev is not None:
                 initial = self.reproduce_bug(self.branch, self.original_rev)
                 if initial.status != ReproductionResult.CRASHED:
-                    msg = f"Bug appears to be fixed on rev {test_rev} but " \
-                          f"BugMon was unable to reproduce using the initial rev {self.original_rev}"
-                    log.info(msg)
-                    comments.append(f"BugMon: {msg}")
+                    self.report(f"Bug appears to be fixed on rev {baseline.build_str} but "
+                                f"BugMon was unable to reproduce using the initial rev {self.original_rev}.")
                 else:
-                    log.info(f"Verified as fixed on rev {test_rev}")
-                    comments.append(f"BugMon: Verified bug as fixed on rev {test_rev}")
+                    self.report(f"Verified bug as fixed on rev {baseline.build_str}.")
                     self.bug.status = "VERIFIED"
 
             if 'bugmon' in self.bug.keywords:
                 self.bug.keywords.remove('bugmon')
+                self.report(
+                    "Removing bugmon keyword as no further action possible.",
+                    "Please review the bug and re-add the keyword for further analysis."
+                )
         elif baseline.status == ReproductionResult.CRASHED:
-            log.info(f"Bug is marked as resolved but still reproduces on rev {test_rev}")
-            comments.append(f"BugMon: Bug is marked as FIXED but it still reproduces on rev {test_rev}")
+            self.report(f"Bug is marked as resolved but still reproduces on rev {baseline.build_str}.")
 
         for alias, rel_num in self.branches.items():
             if isinstance(rel_num, int):
@@ -485,8 +478,6 @@ class BugMonitor:
                 elif baseline.status == ReproductionResult.CRASHED:
                     log.info(f"Bug remains vulnerable on {flag}")
                     setattr(self.bug, flag, 'affected')
-
-        self.report(comments)
 
     def bisect(self, find_fix):
         """
@@ -511,22 +502,19 @@ class BugMonitor:
             self.remove_command('bisect')
 
         if result.status != BisectionResult.SUCCESS:
-            log.warning(f'Failed to bisect testcase')
-            output = [f'BugMon: Failed to bisect testcase ({result.message})',
+            output = [f'Failed to bisect testcase ({result.message}):',
                       f'> Start: {result.start.changeset} ({result.start.build_id})',
-                      f'> End: {result.end.changeset} ({result.end.build_id})']
-            return "\n".join(output)
+                      f'> End: {result.end.changeset} ({result.end.build_id})',
+                      f'> BuildFlags: {str(self.build_flags)}',
+                      f'> RunFlags: {", ".join(self.runtime_opts)}']
+            self.report(*output)
+        else:
+            output = [f'> Start: {result.start.changeset} ({result.start.build_id})',
+                      f'> End: {result.end.changeset} ({result.end.build_id})',
+                      f'> Pushlog: {result.pushlog}']
 
-        output = [f'> Start: {result.start.changeset} ({result.start.build_id})',
-                  f'> End: {result.end.changeset} ({result.end.build_id})',
-                  f'> Pushlog: {result.pushlog}']
-
-        log.info(f'Reduced build range to...')
-        for text in output:
-            log.info(text)
-
-        range_string = "\n".join(output)
-        return f'BugMon: Reduced build range to...\n{range_string}'
+            verb = "fixed" if find_fix else "introduced"
+            self.report(f"The bug appears to have been {verb} in the following build range:", *output)
 
     def process(self):
         """
@@ -538,10 +526,13 @@ class BugMonitor:
         """
 
         if self.branch is None:
+            self.report([f'Bug filed against non-supported branch ({self.version})'])
             if 'bugmon' in self.bug.keywords:
                 self.bug.keywords.remove('bugmon')
-            log.warning(f'Bug filed against non-supported branch ({self.version})')
-            self.report([f'Bug filed against non-supported branch ({self.version})'])
+                self.report(
+                    "Removing bugmon keyword as no further action possible.",
+                    "Please review the bug and re-add the keyword for further analysis."
+                )
             return
 
         baseline = self.reproduce_bug(self.branch)
@@ -557,13 +548,22 @@ class BugMonitor:
         #   We should likely warn via a bug comment or handle this explicitly
         if 'verify' in self.commands or (self.bug.status == 'RESOLVED' and self.bug.resolution == 'FIXED'):
             self.verify_fixed(baseline)
-        elif 'confirm' in self.commands or self.bug.status in {'NEW', 'UNCONFIRMED', 'REOPENED'}:
+        elif 'confirm' in self.commands or self.bug.status in {'ASSIGNED', 'NEW', 'UNCONFIRMED', 'REOPENED'}:
             self.confirm_open(baseline)
 
         if 'bisect' in self.commands:
             find_fix = baseline.status == ReproductionResult.PASSED
-            result = self.bisect(find_fix)
-            self.report([result])
+            self.bisect(find_fix)
+
+        # Update bug
+        diff = self.bug.diff()
+        if diff:
+            log.info(f"Changes: {json.dumps(diff)}")
+            if not self.dry_run:
+                self.bug.add_comment("Bugmon Analysis:\n%s" % "\n".join(self.queue))
+                self.bugsy.put(self.bug)
+                self.bug.update()
+                self.queue = []
 
     def reproduce_bug(self, branch, rev=None):
         try:
@@ -577,33 +577,24 @@ class BugMonitor:
             log.error(f"Error fetching build: {e}")
             return ReproductionResult(ReproductionResult.NO_BUILD)
 
+        log.info(f"Attempting to reproduce bug on mozilla-{branch} {build.build_id}-{build.changeset[:12]}")
         with self.build_manager.get_build(build) as build_path:
-            log.info(f"Attempting to reproduce bug on mozilla-{branch} {build.build_id}-{build.changeset[:12]}")
             status = self.evaluator.evaluate_testcase(build_path)
+            build_str = f"mozilla-{self.branch} {build.build_id}-{build.changeset[:12]}"
             if status == Bisector.BUILD_CRASHED:
-                return ReproductionResult(ReproductionResult.CRASHED, build)
+                return ReproductionResult(ReproductionResult.CRASHED, build_str)
             elif status == Bisector.BUILD_PASSED:
-                return ReproductionResult(ReproductionResult.PASSED, build)
+                return ReproductionResult(ReproductionResult.PASSED, build_str)
             else:
-                return ReproductionResult(ReproductionResult.FAILED, build)
+                return ReproductionResult(ReproductionResult.FAILED, build_str)
 
-    def report(self, messages):
+    def report(self, *messages):
         """
         Push changes or if dry_run, report to log
         :param messages: List of comments
         :return:
         """
-        diff = self.bug.diff()
         for message in messages:
+            self.queue.append(message)
             for line in message.splitlines():
-                log.info(f"Comment: {line}")
-        log.info(f"Changes: {json.dumps(diff)}")
-
-        if not self.dry_run:
-            for message in messages:
-                self.bug.add_comment(message)
-
-            # If changes were made to the bug, push and update
-            if diff:
-                self.bugsy.put(self.bug)
-                self.bug.update()
+                log.info(line)
