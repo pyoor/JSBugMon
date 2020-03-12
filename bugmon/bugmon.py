@@ -41,6 +41,7 @@ ALLOWED_OPTS = [
     '--ion-eager',
     '--baseline-eager',
     '--ion-regalloc=backtracking',
+    '--ion-full-warmup-threshold=0',
     # '--ion-regalloc=lsra', Invalid arg
     '--thread-count=2',
     '--cpu-count=2',
