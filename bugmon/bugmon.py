@@ -370,15 +370,24 @@ class BugMonitor:
                     prefs_path = os.path.join(self.working_dir, filename)
         return prefs_path
 
+    def _remove_keyword(self):
+        """
+        Remove bugmon keyword and report why
+        """
+        if 'bugmon' in self.bug.keywords:
+            self.bug.keywords.remove('bugmon')
+            self.report(
+                "Removing bugmon keyword as no further action possible.",
+                "Please review the bug and re-add the keyword for further analysis."
+            )
+
     def _confirm_open(self, baseline):
         """
         Attempt to confirm open test cases
-
         :param baseline: A reproduction result
         """
         if baseline.status == ReproductionResult.CRASHED:
             if 'confirmed' not in self.commands:
-                self.add_command('confirmed')
                 self.report(f"Verified bug as reproducible on {baseline.build_str}")
                 self._bisect(find_fix=False)
             else:
@@ -398,14 +407,11 @@ class BugMonitor:
             if 'close' in self.commands:
                 self.bug.status = 'RESOLVED'
                 self.bug.resolution = 'WORKSFORME'
-            if 'bugmon' in self.bug.keywords:
-                self.bug.keywords.remove('bugmon')
-                self.report(
-                    "Removing bugmon keyword as no further action possible.",
-                    "Please review the bug and re-add the keyword for further analysis."
-                )
+            # Remove from further analysis
+            self._remove_keyword()
 
-        # Remove the confirm command
+        # Set confirmed status and remove the confirm command
+        self.add_command('confirmed')
         if 'confirm' in self.commands:
             self.remove_command('confirm')
 
@@ -426,12 +432,8 @@ class BugMonitor:
                 self.report(f"Verified bug as fixed on rev {baseline.build_str}.")
                 self.bug.status = "VERIFIED"
 
-            if 'bugmon' in self.bug.keywords:
-                self.bug.keywords.remove('bugmon')
-                self.report(
-                    "Removing bugmon keyword as no further action possible.",
-                    "Please review the bug and re-add the keyword for further analysis."
-                )
+            # Remove from further analysis
+            self._remove_keyword()
         elif baseline.status == ReproductionResult.CRASHED:
             self.report(f"Bug is marked as resolved but still reproduces using {baseline.build_str}.")
 
