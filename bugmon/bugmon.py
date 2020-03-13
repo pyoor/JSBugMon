@@ -531,10 +531,12 @@ class BugMonitor:
         if diff:
             log.info(f"Changes: {json.dumps(diff)}")
             if not self.dry_run:
-                self.bug.add_comment("Bugmon Analysis:\n%s" % "\n".join(self.queue))
                 self.bugsy.put(self.bug)
                 self.bug.update()
-                self.queue = []
+
+        if not self.dry_run:
+            self.bug.add_comment("Bugmon Analysis:\n%s" % "\n".join(self.queue))
+            self.queue = []
 
     def reproduce_bug(self, branch, build_id=None):
         try:
