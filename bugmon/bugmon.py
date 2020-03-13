@@ -35,42 +35,6 @@ from fuzzfetch.fetch import Platform
 
 log = logging.getLogger("bugmon")
 
-# ToDo: Move ALLOWED_OPTS to autobisect's JS evaluator
-ALLOWED_OPTS = [
-    '--fuzzing-safe',
-    '--ion-eager',
-    '--baseline-eager',
-    '--ion-regalloc=backtracking',
-    '--ion-full-warmup-threshold=0',
-    # '--ion-regalloc=lsra', Invalid arg
-    '--thread-count=2',
-    '--cpu-count=2',
-    # '--ion-parallel-compile=off', Invalid arg
-    '--ion-offthread-compile=off',
-    '--ion-check-range-analysis',
-    '--ion-gvn=pessimistic',
-    '--ion-gvn=off',
-    '--no-ion',
-    '--no-baseline',
-    '--arm-sim-icache-checks',
-    '--arm-asm-nop-fill=1',
-    '--no-threads',
-    # '--unboxed-objects', Invalid arg
-    # '--ion-fuzzer-checks', Invalid arg
-    '--ion-extra-checks',
-    '--arm-hwcap=vfp',
-    '--ion-shared-stubs=on',
-    '--ion-pgo=on',
-    '--nursery-strings=on',
-    '--nursery-strings=off',
-    # '--enable-experimental-fields', Invalid arg
-    '--ion-warmup-threshold=0',
-    '--ion-warmup-threshold=1',
-    '--baseline-warmup-threshold=0',
-    '--baseline-warmup-threshold=1',
-    '-D'
-]
-
 AVAILABLE_BRANCHES = ['mozilla-central', 'mozilla-beta', 'mozilla-release']
 HTTP_SESSION = requests.Session()
 
@@ -297,7 +261,15 @@ class BugMonitor:
         """
         Attempt to enumerate the runtime flags specified in comment 0
         """
-        return list(filter(lambda flag: flag in self.comment_zero, ALLOWED_OPTS))
+        all_flags = JSEvaluator.get_valid_flags('tip')
+        flags = []
+        for flag in all_flags:
+            if flag in self.comment_zero:
+                match = re.search(rf"(--{flag}[a-z0-9=\-]*)", self.comment_zero, re.IGNORECASE)
+                if match is not None:
+                    flags.append(match.group(0))
+
+        return flags
 
     @property
     def commands(self):
