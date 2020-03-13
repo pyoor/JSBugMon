@@ -370,7 +370,7 @@ class BugMonitor:
                     prefs_path = os.path.join(self.working_dir, filename)
         return prefs_path
 
-    def confirm_open(self, baseline):
+    def _confirm_open(self, baseline):
         """
         Attempt to confirm open test cases
 
@@ -380,7 +380,7 @@ class BugMonitor:
             if 'confirmed' not in self.commands:
                 self.add_command('confirmed')
                 self.report(f"Verified bug as reproducible on {baseline.build_str}")
-                self.bisect(find_fix=False)
+                self._bisect(find_fix=False)
             else:
                 last_change = datetime.strptime(self.bug.last_change_time, '%Y-%m-%dT%H:%M:%SZ')
                 if datetime.now() - timedelta(days=30) > last_change:
@@ -389,7 +389,7 @@ class BugMonitor:
             original_result = self.reproduce_bug(self.branch, self.initial_build_id)
             if original_result.status == ReproductionResult.CRASHED:
                 log.info(f"Testcase crashes using the initial build ({original_result.build_str})")
-                self.bisect(find_fix=True)
+                self._bisect(find_fix=True)
             else:
                 self.report(f"Unable to reproduce bug using the following builds:",
                             f"> {baseline.build_str}",
@@ -409,7 +409,7 @@ class BugMonitor:
         if 'confirm' in self.commands:
             self.remove_command('confirm')
 
-    def verify_fixed(self, baseline):
+    def _verify_fixed(self, baseline):
         """
         Attempt to verify the bug state
 
@@ -451,7 +451,7 @@ class BugMonitor:
                     log.info(f"Bug remains vulnerable on {flag}")
                     setattr(self.bug, flag, 'affected')
 
-    def bisect(self, find_fix):
+    def _bisect(self, find_fix):
         """
         Attempt to enumerate the changeset that introduced the bug or,
         if find_fix=True, the changeset that fixed it.
@@ -518,13 +518,13 @@ class BugMonitor:
         #   No valid scenario exists where both commands should be present on a bug at the same time
         #   We should likely warn via a bug comment or handle this explicitly
         if 'verify' in self.commands or (self.bug.status == 'RESOLVED' and self.bug.resolution == 'FIXED'):
-            self.verify_fixed(baseline)
+            self._verify_fixed(baseline)
         elif 'confirm' in self.commands or self.bug.status in {'ASSIGNED', 'NEW', 'UNCONFIRMED', 'REOPENED'}:
-            self.confirm_open(baseline)
+            self._confirm_open(baseline)
 
         if 'bisect' in self.commands:
             find_fix = baseline.status == ReproductionResult.PASSED
-            self.bisect(find_fix)
+            self._bisect(find_fix)
 
         # Update bug
         diff = self.bug.diff()
