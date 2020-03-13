@@ -171,7 +171,7 @@ class BugMonitor:
         if self._build_flags is None:
             asan = 'AddressSanitizer: ' in self.comment_zero or '--enable-address-sanitizer' in self.comment_zero
             tsan = 'ThreadSanitizer: ' in self.comment_zero or '--enable-thread-sanitizer' in self.comment_zero
-            debug = '--enable-debug' in self.comment_zero
+            debug = '--enable-debug' in self.comment_zero or 'assertion' in self.bug.keywords
             fuzzing = '--enable-fuzzing' in self.comment_zero
             coverage = '--enable-coverage' in self.comment_zero
             valgrind = False  # Ignore valgrind for now
