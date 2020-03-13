@@ -11,6 +11,7 @@ from bugmon import BugMonitor, BugException
 
 log = logging.getLogger("bugmon")
 
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser()
 
