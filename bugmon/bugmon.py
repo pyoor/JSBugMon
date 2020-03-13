@@ -301,15 +301,15 @@ class BugMonitor:
     def commands(self, value):
         parts = ','.join([f"{k}={v}" if v is not None else k for k, v in value.items()])
         if len(parts):
-            if re.search(r'(?<=bugmon:)(.[^\]]*)', self.bug.whiteboard):
+            if re.search(r'(?<=\[bugmon:)(.[^\]]*)', self.bug.whiteboard):
                 if len(self.commands.keys()):
-                    self.bug.whiteboard = re.sub(r'(?<=bugmon:)(.[^\]]*)', parts, self.bug.whiteboard)
+                    self.bug.whiteboard = re.sub(r'(?<=\[bugmon:)(.[^\]]*)', parts, self.bug.whiteboard)
                 else:
                     self.bug.whiteboard = re.sub(r'([bugmon:.[^\]]*)', '', self.bug.whiteboard)
             else:
                 self.bug.whiteboard += f'[bugmon:{parts}]'
         else:
-            self.bug.whiteboard = re.sub(r'(?<=bugmon:)(.[^\]]*)', parts, self.bug.whiteboard)
+            self.bug.whiteboard = re.sub(r'(?<=\[bugmon:)(.[^\]]*)', parts, self.bug.whiteboard)
 
     def add_command(self, key, value=None):
         """
