@@ -404,9 +404,6 @@ class BugMonitor:
                             f"> {baseline.build_str}",
                             f"> {original_result.build_str}")
 
-            if 'close' in self.commands:
-                self.bug.status = 'RESOLVED'
-                self.bug.resolution = 'WORKSFORME'
             # Remove from further analysis
             self._remove_keyword()
 
