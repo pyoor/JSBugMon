@@ -509,34 +509,27 @@ class BugMonitor:
         if 'bisect' in self.commands:
             actions.append(RequestedActions.BISECT)
 
-        if len(actions):
-            baseline = self.reproduce_bug(self.branch)
-            if baseline.status == ReproductionResult.NO_BUILD:
-                log.warning(f'Could not find matching build to verify status')
-                return
-            if baseline.status == ReproductionResult.FAILED:
-                log.warning(f'Unable to verify status due to bad build')
-                return
+        if not len(actions):
+            log.info(f'Nothing to do for bug {self.bug.id}')
+            return
 
-            for action in actions:
-                if action == RequestedActions.VERIFY_FIXED:
-                    self._verify_fixed(baseline)
-                elif action == RequestedActions.CONFIRM_OPEN:
-                    self._confirm_open(baseline)
-                elif action == RequestedActions.BISECT:
-                    self._bisect(baseline.status == ReproductionResult.PASSED)
+        baseline = self.reproduce_bug(self.branch)
+        if baseline.status == ReproductionResult.NO_BUILD:
+            log.warning(f'Could not find matching build to verify status')
+            return
+        if baseline.status == ReproductionResult.FAILED:
+            log.warning(f'Unable to verify status due to bad build')
+            return
 
-        # Update bug
-        diff = self.bug.diff()
-        if diff:
-            log.info(f"Changes: {json.dumps(diff)}")
-            if not self.dry_run:
-                self.bugsy.put(self.bug)
-                self.bug.update()
+        for action in actions:
+            if action == RequestedActions.VERIFY_FIXED:
+                self._verify_fixed(baseline)
+            elif action == RequestedActions.CONFIRM_OPEN:
+                self._confirm_open(baseline)
+            elif action == RequestedActions.BISECT:
+                self._bisect(baseline.status == ReproductionResult.PASSED)
 
-        if not self.dry_run:
-            self.bug.add_comment("Bugmon Analysis:\n%s" % "\n".join(self.queue))
-            self.queue = []
+        self.update()
 
     def reproduce_bug(self, branch, build_id=None):
         try:
