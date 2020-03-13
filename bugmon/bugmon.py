@@ -416,7 +416,7 @@ class BugMonitor:
         """
         if baseline.status == ReproductionResult.CRASHED:
             if "confirmed" not in self.commands:
-                self.report(f"Verified bug as reproducible on {baseline.build_str}")
+                self.report(f"Verified bug as reproducible on {baseline.build_str}.")
                 self._bisect(find_fix=False)
             else:
                 last_change = datetime.strptime(
@@ -425,17 +425,15 @@ class BugMonitor:
                 if datetime.now() - timedelta(days=30) > last_change:
                     self.report(f"Bug remains reproducible on {baseline.build_str}")
         elif baseline.status == ReproductionResult.PASSED:
-            original_result = self.reproduce_bug(self.branch, self.initial_build_id)
-            if original_result.status == ReproductionResult.CRASHED:
-                log.info(
-                    f"Testcase crashes using the initial build ({original_result.build_str})"
-                )
+            orig = self.reproduce_bug(self.branch, self.initial_build_id)
+            if orig.status == ReproductionResult.CRASHED:
+                log.info(f"Testcase crashes using the initial build ({orig.build_str})")
                 self._bisect(find_fix=True)
             else:
                 self.report(
                     f"Unable to reproduce bug using the following builds:",
                     f"> {baseline.build_str}",
-                    f"> {original_result.build_str}",
+                    f"> {orig.build_str}",
                 )
 
             # Remove from further analysis
