@@ -512,7 +512,8 @@ class BugMonitor:
         )
         result = bisector.bisect()
 
-        # Remove bisect command
+        # Set bisected status and remove the bisect command
+        self.add_command("bisected")
         if "bisect" in self.commands:
             self.remove_command("bisect")
 
