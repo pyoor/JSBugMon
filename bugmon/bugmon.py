@@ -25,6 +25,7 @@ import platform
 import re
 import zipfile
 from datetime import datetime, timedelta
+from enum import Enum
 
 import requests
 from autobisect.bisect import BisectionResult, Bisector
@@ -51,6 +52,12 @@ def _get_url(url):
 def enum(*sequential, **named):
     enums = dict(list(zip(sequential, list(range(len(sequential))))), **named)
     return type('Enum', (), enums)
+
+
+class RequestedActions(Enum):
+    VERIFY_FIXED = 1
+    CONFIRM_OPEN = 2
+    BISECT = 3
 
 
 class BugException(Exception):
@@ -494,36 +501,39 @@ class BugMonitor:
         verify - Attempt to verify the bug state
         bisect - Attempt to bisect the bug regression or, if RESOLVED, the bug fix
         """
-
         if self.branch is None:
             self.report([f'Bug filed against non-supported branch ({self.version})'])
-            if 'bugmon' in self.bug.keywords:
-                self.bug.keywords.remove('bugmon')
-                self.report(
-                    "Removing bugmon keyword as no further action possible.",
-                    "Please review the bug and re-add the keyword for further analysis."
-                )
+            self._remove_keyword()
             return
 
-        baseline = self.reproduce_bug(self.branch)
-        if baseline.status == ReproductionResult.NO_BUILD:
-            log.warning(f'Could not find matching build to verify status')
-            return
-        if baseline.status == ReproductionResult.FAILED:
-            log.warning(f'Unable to verify status due to bad build')
-            return
+        actions = []
+        if 'verified' not in self.commands:
+            if 'verify' in self.commands or (self.bug.status == 'RESOLVED' and self.bug.resolution == 'FIXED'):
+                actions.append(RequestedActions.VERIFY_FIXED)
 
-        # ToDo: Verify and confirm are conflicting commands
-        #   No valid scenario exists where both commands should be present on a bug at the same time
-        #   We should likely warn via a bug comment or handle this explicitly
-        if 'verify' in self.commands or (self.bug.status == 'RESOLVED' and self.bug.resolution == 'FIXED'):
-            self._verify_fixed(baseline)
-        elif 'confirm' in self.commands or self.bug.status in {'ASSIGNED', 'NEW', 'UNCONFIRMED', 'REOPENED'}:
-            self._confirm_open(baseline)
+        if 'confirmed' not in self.commands:
+            if 'confirm' in self.commands or self.bug.status in {'ASSIGNED', 'NEW', 'UNCONFIRMED', 'REOPENED'}:
+                actions.append(RequestedActions.CONFIRM_OPEN)
 
         if 'bisect' in self.commands:
-            find_fix = baseline.status == ReproductionResult.PASSED
-            self._bisect(find_fix)
+            actions.append(RequestedActions.BISECT)
+
+        if len(actions):
+            baseline = self.reproduce_bug(self.branch)
+            if baseline.status == ReproductionResult.NO_BUILD:
+                log.warning(f'Could not find matching build to verify status')
+                return
+            if baseline.status == ReproductionResult.FAILED:
+                log.warning(f'Unable to verify status due to bad build')
+                return
+
+            for action in actions:
+                if action == RequestedActions.VERIFY_FIXED:
+                    self._verify_fixed(baseline)
+                elif action == RequestedActions.CONFIRM_OPEN:
+                    self._confirm_open(baseline)
+                elif action == RequestedActions.BISECT:
+                    self._bisect(baseline.status == ReproductionResult.PASSED)
 
         # Update bug
         diff = self.bug.diff()
