@@ -97,6 +97,7 @@ class BugMonitor:
         self._comment_zero = None
         self._initial_build_id = None
         self._platform = None
+        self._close_bug = False
 
         self.testcase = None
         self.fetch_attachments()
@@ -377,17 +378,6 @@ class BugMonitor:
                     prefs_path = os.path.join(self.working_dir, filename)
         return prefs_path
 
-    def _remove_keyword(self):
-        """
-        Remove bugmon keyword and report why
-        """
-        if 'bugmon' in self.bug.keywords:
-            self.bug.keywords.remove('bugmon')
-            self.report(
-                "Removing bugmon keyword as no further action possible.",
-                "Please review the bug and re-add the keyword for further analysis."
-            )
-
     def _confirm_open(self, baseline):
         """
         Attempt to confirm open test cases
@@ -412,7 +402,7 @@ class BugMonitor:
                             f"> {original_result.build_str}")
 
             # Remove from further analysis
-            self._remove_keyword()
+            self._close_bug = True
 
         # Set confirmed status and remove the confirm command
         self.add_command('confirmed')
@@ -437,7 +427,7 @@ class BugMonitor:
                 self.bug.status = "VERIFIED"
 
             # Remove from further analysis
-            self._remove_keyword()
+            self._close_bug = True
         elif baseline.status == ReproductionResult.CRASHED:
             self.report(f"Bug is marked as resolved but still reproduces using {baseline.build_str}.")
 
@@ -503,7 +493,8 @@ class BugMonitor:
         """
         if self.branch is None:
             self.report([f'Bug filed against non-supported branch ({self.version})'])
-            self._remove_keyword()
+            self._close_bug = True
+            self.update()
             return
 
         actions = []
@@ -580,3 +571,26 @@ class BugMonitor:
             self.queue.append(message)
             for line in message.splitlines():
                 log.info(line)
+
+    def update(self):
+        """
+        Post any changes to the bug
+        """
+        if self._close_bug:
+            if 'bugmon' in self.bug.keywords:
+                self.bug.keywords.remove('bugmon')
+                self.report(
+                    "Removing bugmon keyword as no further action possible.",
+                    "Please review the bug and re-add the keyword for further analysis."
+                )
+
+        diff = self.bug.diff()
+        if diff:
+            log.info(f"Changes: {json.dumps(diff)}")
+            if not self.dry_run:
+                self.bugsy.put(self.bug)
+                self.bug.update()
+
+        if not self.dry_run:
+            self.bug.add_comment("Bugmon Analysis:\n%s" % "\n".join(self.queue))
+            self.queue = []
