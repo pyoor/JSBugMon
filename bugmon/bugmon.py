@@ -552,45 +552,53 @@ class BugMonitor:
             self.update()
             return
 
-        actions = []
-        if "verified" not in self.commands:
-            if "verify" in self.commands or (
-                self.bug.status == "RESOLVED" and self.bug.resolution == "FIXED"
-            ):
-                actions.append(RequestedActions.VERIFY_FIXED)
+        # Some testcases require setting the cwd to the parent dir
+        previous_path = os.getcwd()
+        os.chdir(self.working_dir)
+        try:
 
-        if "confirmed" not in self.commands:
-            if "confirm" in self.commands or self.bug.status in {
-                "ASSIGNED",
-                "NEW",
-                "UNCONFIRMED",
-                "REOPENED",
-            }:
-                actions.append(RequestedActions.CONFIRM_OPEN)
+            actions = []
+            if "verified" not in self.commands:
+                if "verify" in self.commands or (
+                    self.bug.status == "RESOLVED" and self.bug.resolution == "FIXED"
+                ):
+                    actions.append(RequestedActions.VERIFY_FIXED)
 
-        if "bisect" in self.commands:
-            actions.append(RequestedActions.BISECT)
+            if "confirmed" not in self.commands:
+                if "confirm" in self.commands or self.bug.status in {
+                    "ASSIGNED",
+                    "NEW",
+                    "UNCONFIRMED",
+                    "REOPENED",
+                }:
+                    actions.append(RequestedActions.CONFIRM_OPEN)
 
-        if not len(actions):
-            log.info(f"Nothing to do for bug {self.bug.id}")
-            return
+            if "bisected" not in self.commands and "bisect" in self.commands:
+                actions.append(RequestedActions.BISECT)
 
-        baseline = self.reproduce_bug(self.branch)
-        if baseline.status == ReproductionResult.NO_BUILD:
-            log.warning(f"Could not find matching build to verify status")
-            return
-        if baseline.status == ReproductionResult.FAILED:
-            log.warning(f"Unable to verify status due to bad build")
-            return
+            if not len(actions):
+                log.info(f"Nothing to do for bug {self.bug.id}")
+                return
 
-        for action in actions:
-            if action == RequestedActions.VERIFY_FIXED:
-                self._verify_fixed(baseline)
-            elif action == RequestedActions.CONFIRM_OPEN:
-                self._confirm_open(baseline)
-            elif action == RequestedActions.BISECT:
-                self._bisect(baseline.status == ReproductionResult.PASSED)
+            baseline = self.reproduce_bug(self.branch)
+            if baseline.status == ReproductionResult.NO_BUILD:
+                log.warning(f"Could not find matching build to verify status")
+                return
+            if baseline.status == ReproductionResult.FAILED:
+                log.warning(f"Unable to verify status due to bad build")
+                return
 
+            for action in actions:
+                if action == RequestedActions.VERIFY_FIXED:
+                    self._verify_fixed(baseline)
+                elif action == RequestedActions.CONFIRM_OPEN:
+                    self._confirm_open(baseline)
+                elif action == RequestedActions.BISECT:
+                    self._bisect(baseline.status == ReproductionResult.PASSED)
+        finally:
+            os.chdir(previous_path)
+
+        # Post updates and comments
         self.update()
 
     def reproduce_bug(self, branch, build_id=None):
