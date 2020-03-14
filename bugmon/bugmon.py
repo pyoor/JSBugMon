@@ -291,7 +291,7 @@ class BugMonitor:
         for flag in all_flags:
             if flag in self.comment_zero:
                 match = re.search(
-                    rf"(--{flag}[a-z0-9=\-]*)", self.comment_zero, re.IGNORECASE
+                    rf"(--{flag}[a-z0-9=-]*)", self.comment_zero, re.IGNORECASE
                 )
                 if match is not None:
                     flags.append(match.group(0))
